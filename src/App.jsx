@@ -1,31 +1,42 @@
 import React, { useEffect, useState } from "react";
 import {
   DollarSign, ShieldCheck, AlertTriangle, Settings, Truck,
-  ChevronRight, X, CheckCircle2, XCircle, Sparkles,
-  FileText, Lightbulb, Target, HelpCircle, ArrowLeft,
-  Download, Trash2, Lock, Unlock
+  ChevronRight, X, CheckCircle2, Sparkles,
+  FileText, Lightbulb, Target, ArrowLeft,
+  Download, Trash2, Lock, KeyRound, Copy, Plus, FileDown
 } from "lucide-react";
 
 import { BLOCKS, QUESTIONS, COLOR_MAP, OPTION_STYLES, findBlock } from "./lib/data";
-import { saveAnswers, loadAnswers, clearAnswers, exportAnswersAsJson } from "./lib/storage";
-import { isAccessRequired, hasValidSession, validateToken } from "./lib/access";
+import { saveAnswers, loadAnswers, clearAnswers, exportAnswersAsJson, exportAnswersAsPdf } from "./lib/storage";
+import { hasValidSession, validateToken, clearSession } from "./lib/access";
+import { hasTokens, bootstrapAndUnlock, generateNewToken, listTokensMeta, purgeAll } from "./lib/tokens";
 
 const ICON_MAP = { DollarSign, ShieldCheck, AlertTriangle, Settings, Truck };
 
 export default function App() {
-  const [accessGranted, setAccessGranted] = useState(!isAccessRequired() || hasValidSession());
+  const [accessGranted, setAccessGranted] = useState(hasValidSession());
+  const [lastIssuedToken, setLastIssuedToken] = useState(null);
 
   if (!accessGranted) {
-    return <AccessGate onGranted={() => setAccessGranted(true)} />;
+    return (
+      <AccessGate
+        onGranted={(issuedToken) => {
+          if (issuedToken) setLastIssuedToken(issuedToken);
+          setAccessGranted(true);
+        }}
+      />
+    );
   }
 
-  return <MainApp />;
+  return <MainApp initialIssuedToken={lastIssuedToken} onLock={() => { clearSession(); setAccessGranted(false); }} />;
 }
 
 function AccessGate({ onGranted }) {
+  const isFirstBoot = !hasTokens();
   const [token, setToken] = useState("");
   const [error, setError] = useState("");
   const [checking, setChecking] = useState(false);
+  const [bootstrapping, setBootstrapping] = useState(false);
 
   const handleSubmit = async () => {
     setChecking(true);
@@ -33,7 +44,14 @@ function AccessGate({ onGranted }) {
     const ok = await validateToken(token);
     setChecking(false);
     if (ok) onGranted();
-    else setError("Token inválido.");
+    else setError("Token inválido ou não está entre os 5 ativos.");
+  };
+
+  const handleBootstrap = async () => {
+    setBootstrapping(true);
+    const newToken = await bootstrapAndUnlock();
+    setBootstrapping(false);
+    onGranted(newToken);
   };
 
   return (
@@ -48,53 +66,84 @@ function AccessGate({ onGranted }) {
             <p className="text-xs text-slate-500">Pauta CIT AI TECH</p>
           </div>
         </div>
-        <p className="text-sm text-slate-600 mb-5">Digite o token de acesso para continuar.</p>
-        <input
-          type="password" autoFocus value={token}
-          onChange={(e) => setToken(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && !checking && handleSubmit()}
-          className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:border-slate-500 focus:ring-2 focus:ring-slate-200 outline-none text-sm mb-3"
-          placeholder="Token"
-        />
-        {error && <p className="text-xs text-rose-600 mb-3">{error}</p>}
-        <button onClick={handleSubmit} disabled={checking || !token}
-          className="w-full py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white text-sm font-medium transition-colors">
-          {checking ? "Verificando..." : "Entrar"}
-        </button>
-        <p className="text-[10px] text-slate-400 text-center mt-4">Token validado localmente via SHA-256</p>
+
+        {isFirstBoot ? (
+          <>
+            <p className="text-sm text-slate-600 mb-4">
+              Primeira execução neste dispositivo. Gere o token mestre —
+              ele abre o app e cifra as respostas.
+            </p>
+            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800 mb-4">
+              Guarde o token em local seguro. Ele não será mostrado novamente.
+              Você pode rotacionar para até 5 tokens ativos depois.
+            </div>
+            <button
+              onClick={handleBootstrap}
+              disabled={bootstrapping}
+              className="w-full py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+            >
+              <KeyRound size={16} />
+              {bootstrapping ? "Gerando..." : "Gerar token e entrar"}
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-slate-600 mb-5">
+              Digite um dos 5 tokens ativos para continuar.
+            </p>
+            <input
+              type="password" autoFocus value={token}
+              onChange={(e) => setToken(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && !checking && handleSubmit()}
+              className="w-full px-3 py-2.5 rounded-lg border border-slate-300 focus:border-slate-500 focus:ring-2 focus:ring-slate-200 outline-none text-sm mb-3"
+              placeholder="Token"
+            />
+            {error && <p className="text-xs text-rose-600 mb-3">{error}</p>}
+            <button onClick={handleSubmit} disabled={checking || !token}
+              className="w-full py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white text-sm font-medium transition-colors">
+              {checking ? "Verificando..." : "Entrar"}
+            </button>
+            <p className="text-[10px] text-slate-400 text-center mt-4">
+              Token valida via SHA-256 + AES-GCM (chave mestra envolvida)
+            </p>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-function MainApp() {
+function MainApp({ initialIssuedToken, onLock }) {
   const [view, setView] = useState("mindmap");
   const [activeBlock, setActiveBlock] = useState(null);
   const [activeQuestion, setActiveQuestion] = useState(null);
   const [answers, setAnswers] = useState({});
-  const [password, setPassword] = useState("");
-  const [passwordPromptOpen, setPasswordPromptOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [loadError, setLoadError] = useState(null);
+  const [tokenModalOpen, setTokenModalOpen] = useState(false);
+  const [freshToken, setFreshToken] = useState(initialIssuedToken || null);
 
-  // Carrega respostas ao montar (tenta sem senha; se for cifrado, pede)
   useEffect(() => {
     (async () => {
       try {
-        const data = await loadAnswers("");
+        const data = await loadAnswers();
         setAnswers(data);
-        setLoaded(true);
       } catch (e) {
-        setPasswordPromptOpen(true);
+        console.error(e);
+      } finally {
+        setLoaded(true);
       }
     })();
   }, []);
 
-  // Persiste ao mudar
   useEffect(() => {
     if (!loaded) return;
-    saveAnswers(answers, password).catch(console.error);
-  }, [answers, password, loaded]);
+    saveAnswers(answers).catch(console.error);
+  }, [answers, loaded]);
+
+  // Ao receber token recém-gerado (bootstrap), abre o modal para exibi-lo.
+  useEffect(() => {
+    if (initialIssuedToken) setTokenModalOpen(true);
+  }, [initialIssuedToken]);
 
   const totalQuestions = Object.keys(QUESTIONS).length;
   const completedCount = Object.keys(answers).length;
@@ -115,33 +164,23 @@ function MainApp() {
   const openBlock = (bid) => { setActiveBlock(bid); setView("block"); };
   const backToMap = () => { setActiveBlock(null); setView("mindmap"); };
 
-  const handleExport = () => exportAnswersAsJson(answers, QUESTIONS);
+  const handleExportJson = () => exportAnswersAsJson(answers, QUESTIONS);
+  const handleExportPdf = () => exportAnswersAsPdf(answers, QUESTIONS, BLOCKS);
 
   const handleClear = () => {
     if (confirm("Apagar todas as respostas salvas?")) {
       clearAnswers();
       setAnswers({});
-      setPassword("");
-    }
-  };
-
-  const handleUnlock = async (pwd) => {
-    try {
-      const data = await loadAnswers(pwd);
-      setAnswers(data);
-      setPassword(pwd);
-      setLoaded(true);
-      setPasswordPromptOpen(false);
-      setLoadError(null);
-    } catch (e) {
-      setLoadError("Senha incorreta — tente novamente ou apague os dados.");
     }
   };
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-900 font-sans antialiased">
-      {passwordPromptOpen && (
-        <PasswordPrompt onUnlock={handleUnlock} onClear={() => { clearAnswers(); setPasswordPromptOpen(false); setAnswers({}); setLoaded(true); }} error={loadError} />
+      {tokenModalOpen && freshToken && (
+        <TokenRevealModal
+          token={freshToken}
+          onClose={() => { setTokenModalOpen(false); setFreshToken(null); }}
+        />
       )}
 
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/80 backdrop-blur-md">
@@ -162,11 +201,26 @@ function MainApp() {
               </div>
               <span className="text-xs font-medium text-slate-600 tabular-nums">{completedCount}/{totalQuestions}</span>
             </div>
-            <button onClick={handleExport} disabled={completedCount === 0} className="text-xs font-medium px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors flex items-center gap-1.5" title="Exportar JSON">
-              <Download size={14} /> <span className="hidden sm:inline">Exportar</span>
+            <TokenAdminButton onIssued={(t) => { setFreshToken(t); setTokenModalOpen(true); }} />
+            <button onClick={handleExportPdf} disabled={completedCount === 0}
+              className="text-xs font-medium px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors flex items-center gap-1.5"
+              title="Exportar PDF">
+              <FileDown size={14} /> <span className="hidden sm:inline">PDF</span>
             </button>
-            <button onClick={handleClear} disabled={completedCount === 0} className="text-xs font-medium px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 transition-colors flex items-center gap-1.5" title="Limpar respostas">
+            <button onClick={handleExportJson} disabled={completedCount === 0}
+              className="text-xs font-medium px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors flex items-center gap-1.5"
+              title="Exportar JSON">
+              <Download size={14} /> <span className="hidden sm:inline">JSON</span>
+            </button>
+            <button onClick={handleClear} disabled={completedCount === 0}
+              className="text-xs font-medium px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 transition-colors flex items-center gap-1.5"
+              title="Limpar respostas">
               <Trash2 size={14} />
+            </button>
+            <button onClick={onLock}
+              className="text-xs font-medium px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors flex items-center gap-1.5"
+              title="Bloquear sessão">
+              <Lock size={14} />
             </button>
             {view === "block" && (
               <button onClick={backToMap} className="text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 active:bg-slate-300 transition-colors flex items-center gap-1.5">
@@ -195,10 +249,9 @@ function MainApp() {
 
       <footer className="max-w-6xl mx-auto px-4 sm:px-6 pb-12 pt-4">
         <div className="text-center text-xs text-slate-400 space-y-1">
-          <div>Clique em cada bloco → pergunta. Marque a resposta. Dados salvos localmente.</div>
+          <div>Clique em cada bloco → pergunta. Marque a resposta. Dados salvos e cifrados localmente.</div>
           <div className="flex items-center justify-center gap-1">
-            {password ? <Lock size={10} /> : <Unlock size={10} />}
-            {password ? "Respostas cifradas" : "Sem criptografia (sem senha definida)"}
+            <Lock size={10} /> AES-GCM · chave mestra por token (FIFO máx. 5)
           </div>
         </div>
       </footer>
@@ -206,25 +259,151 @@ function MainApp() {
   );
 }
 
-function PasswordPrompt({ onUnlock, onClear, error }) {
-  const [pwd, setPwd] = useState("");
+function TokenAdminButton({ onIssued }) {
+  const [open, setOpen] = useState(false);
+  const [currentToken, setCurrentToken] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const meta = listTokensMeta();
+
+  const handleGenerate = async () => {
+    setErr("");
+    setBusy(true);
+    try {
+      const newToken = await generateNewToken(currentToken);
+      setCurrentToken("");
+      setOpen(false);
+      onIssued(newToken);
+    } catch (e) {
+      setErr(e.message || "Falha ao gerar token.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur flex items-center justify-center p-4">
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="text-xs font-medium px-2.5 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white transition-colors flex items-center gap-1.5"
+        title="Gerenciar tokens"
+      >
+        <KeyRound size={14} /> <span className="hidden sm:inline">Tokens ({meta.length}/5)</span>
+      </button>
+      {open && (
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setOpen(false)} role="dialog" aria-modal="true">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-violet-500 flex items-center justify-center text-white">
+                <KeyRound size={18} />
+              </div>
+              <div>
+                <h2 className="font-semibold">Gerenciar tokens</h2>
+                <p className="text-xs text-slate-500">FIFO · últimos 5 · AES-GCM wrap</p>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                Tokens ativos ({meta.length}/5)
+              </div>
+              <div className="space-y-1">
+                {meta.length === 0 && <div className="text-xs text-slate-400">Nenhum token ativo.</div>}
+                {meta.map((t, i) => (
+                  <div key={t.id} className="flex items-center justify-between text-xs p-2 rounded-lg bg-slate-50 border border-slate-200">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[10px] text-slate-400">#{i + 1}</span>
+                      <span className="font-mono text-slate-700">…{t.hash}</span>
+                    </div>
+                    <span className="text-slate-500">{new Date(t.createdAt).toLocaleString("pt-BR")}</span>
+                  </div>
+                ))}
+              </div>
+              {meta.length >= 5 && (
+                <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2">
+                  FIFO cheia: o token mais antigo será expulso quando você gerar um novo.
+                </div>
+              )}
+            </div>
+
+            <div className="pt-3 border-t border-slate-200">
+              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                Gerar novo token
+              </div>
+              <p className="text-xs text-slate-600 mb-2">
+                Digite seu token atual para autorizar a emissão de um novo.
+                A chave mestra é re-envelopada sob o novo token — seus dados continuam acessíveis.
+              </p>
+              <input type="password" value={currentToken}
+                onChange={(e) => setCurrentToken(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-violet-500 focus:ring-2 focus:ring-violet-200 outline-none text-sm mb-2"
+                placeholder="Token atual" />
+              {err && <p className="text-xs text-rose-600 mb-2">{err}</p>}
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => setOpen(false)} className="py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium">
+                  Cancelar
+                </button>
+                <button onClick={handleGenerate} disabled={busy || !currentToken}
+                  className="py-2 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-40 text-white text-sm font-medium flex items-center justify-center gap-1.5">
+                  <Plus size={14} /> {busy ? "Gerando..." : "Gerar"}
+                </button>
+              </div>
+              <button
+                onClick={() => {
+                  if (confirm("Apagar TODOS os tokens e respostas? Ação irreversível.")) {
+                    purgeAll();
+                    clearAnswers();
+                    location.reload();
+                  }
+                }}
+                className="w-full mt-3 py-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-medium border border-rose-200"
+              >
+                Apagar tudo e recomeçar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function TokenRevealModal({ token, onClose }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(token);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {}
+  };
+  return (
+    <div className="fixed inset-0 z-[60] bg-slate-900/80 backdrop-blur flex items-center justify-center p-4" role="dialog" aria-modal="true">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-lg bg-violet-500 flex items-center justify-center text-white">
-            <Lock size={18} />
+          <div className="w-10 h-10 rounded-lg bg-emerald-500 flex items-center justify-center text-white">
+            <KeyRound size={18} />
           </div>
-          <h2 className="font-semibold">Respostas protegidas</h2>
+          <div>
+            <h2 className="font-semibold">Novo token gerado</h2>
+            <p className="text-xs text-slate-500">Este valor não será exibido novamente.</p>
+          </div>
         </div>
-        <p className="text-sm text-slate-600 mb-4">Esta sessão tem respostas criptografadas salvas. Digite a senha para continuar.</p>
-        <input type="password" autoFocus value={pwd} onChange={(e) => setPwd(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && onUnlock(pwd)}
-          className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-violet-500 focus:ring-2 focus:ring-violet-200 outline-none text-sm mb-3" placeholder="Senha" />
-        {error && <p className="text-xs text-rose-600 mb-3">{error}</p>}
+        <div className="rounded-lg bg-slate-900 text-white p-3 font-mono text-sm break-all mb-3 select-all">
+          {token}
+        </div>
+        <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800 mb-4">
+          Guarde em gerenciador de senhas. Se perder todos os tokens da FIFO,
+          as respostas cifradas ficam irrecuperáveis.
+        </div>
         <div className="grid grid-cols-2 gap-2">
-          <button onClick={() => onUnlock(pwd)} className="py-2 rounded-lg bg-violet-500 hover:bg-violet-600 text-white text-sm font-medium">Desbloquear</button>
-          <button onClick={onClear} className="py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium">Apagar tudo</button>
+          <button onClick={copy} className="py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-medium flex items-center justify-center gap-2">
+            <Copy size={14} /> {copied ? "Copiado!" : "Copiar"}
+          </button>
+          <button onClick={onClose} className="py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium">
+            Já guardei
+          </button>
         </div>
       </div>
     </div>

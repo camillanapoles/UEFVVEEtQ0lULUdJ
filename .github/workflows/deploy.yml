@@ -1,0 +1,74 @@
+name: Deploy Pauta CIT to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Inject secrets (optional build-time config)
+        # Se você definir o secret APP_ACCESS_TOKEN no repositório,
+        # ele é embutido no build de forma encriptada via VITE_ACCESS_TOKEN_HASH.
+        # Útil para proteger acesso à página via hash SHA-256 comparado em runtime.
+        env:
+          APP_ACCESS_TOKEN: ${{ secrets.APP_ACCESS_TOKEN }}
+        run: |
+          if [ -n "$APP_ACCESS_TOKEN" ]; then
+            HASH=$(echo -n "$APP_ACCESS_TOKEN" | sha256sum | awk '{print $1}')
+            echo "VITE_ACCESS_TOKEN_HASH=$HASH" >> .env.production
+            echo "Token hash injetado no build"
+          else
+            echo "Sem token definido — build público"
+          fi
+
+      - name: Configure base path
+        run: |
+          REPO_NAME="${GITHUB_REPOSITORY#*/}"
+          echo "VITE_BASE=/$REPO_NAME/" >> $GITHUB_ENV
+          echo "Base configurada: /$REPO_NAME/"
+
+      - name: Build
+        run: npm run build
+
+      - name: Add SPA fallback (404.html = index.html)
+        run: cp dist/index.html dist/404.html
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

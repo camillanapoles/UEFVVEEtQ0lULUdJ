@@ -11,8 +11,8 @@ export const BLOCKS = {
     subtitle: "Como o dinheiro é dividido",
     color: "emerald",
     iconName: "DollarSign",
-    questions: ["q2"],
-    keywords: ["deduções", "custos taxativos", "rateio"]
+    questions: ["q15", "q2"],
+    keywords: ["50/50 simétrico", "deduções taxativas", "sócias plenas"]
   },
   propriedade: {
     id: "propriedade",
@@ -53,6 +53,23 @@ export const BLOCKS = {
 };
 
 export const QUESTIONS = {
+  q15: {
+    tag: "Bloco 1 · #1",
+    clause: "Cl. 3.1 — Copropriedade simétrica",
+    title: "50/50 também nas receitas da PI",
+    keywords: ["50/50 simétrico", "sócias plenas", "receitas líquidas", "deduções listadas"],
+    contract: "Cl. 3.1: \"A quota-parte será de 50% para cada parte, salvo se o TEP específico definir proporção distinta com base na contribuição inventiva.\" — define copropriedade 50/50 da PI mas é silente sobre divisão das receitas econômicas (royalty, licenciamento, venda, transferência).",
+    why: "A cláusula 3.1 já estabelece copropriedade 50/50 da PI, o que considero justo dado que aporto laboratório próprio, capital intelectual prévio e responsabilidade técnica. Quero alinhar que essa mesma proporção 50/50 vale também pras receitas econômicas geradas pela PI (licenciamento, royalty, venda, transferência) — sobre o líquido com deduções listadas. Ou seja: nos projetos do contrato, somos sócias de verdade, simétricas em propriedade e em ganhos.",
+    ask: "Topam fixar que a divisão 50/50 da PI vale também pras receitas econômicas (licenciamento, royalty, venda, transferência), sobre o líquido com deduções listadas?",
+    suggestion: "Basta espelhar a 3.1 num parágrafo curto na cláusula 3 — copropriedade 50/50 → ganhos 50/50, mantendo a coerência sem reabrir a estrutura.",
+    options: [
+      { value: "a", label: "50/50 sobre o líquido com deduções taxativas (espelho da 3.1)", type: "solution_best" },
+      { value: "b", label: "50/50 sobre o líquido, deduções definidas no TEP de licenciamento", type: "solution_alt" },
+      { value: "c", label: "Proporção definida caso a caso por TEP", type: "solution_weak" },
+      { value: "d", label: "Advogada retornará com análise", type: "lawyer" },
+      { value: "e", label: "Outro (texto aberto)", type: "open" }
+    ]
+  },
   q2: {
     tag: "Bloco 1 · #2",
     clause: "Cl. 3.2 — Gestão de custos",

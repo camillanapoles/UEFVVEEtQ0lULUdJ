@@ -126,7 +126,11 @@ function MainApp({ initialIssuedToken, onLock }) {
     (async () => {
       try {
         const data = await loadAnswers();
-        setAnswers(data);
+        // Prune respostas órfãs (perguntas removidas em versões anteriores)
+        const pruned = Object.fromEntries(
+          Object.entries(data).filter(([qid]) => QUESTIONS[qid])
+        );
+        setAnswers(pruned);
       } catch (e) {
         console.error(e);
       } finally {

@@ -11,8 +11,8 @@ export const BLOCKS = {
     subtitle: "Como o dinheiro é dividido",
     color: "emerald",
     iconName: "DollarSign",
-    questions: ["q1", "q2", "q3"],
-    keywords: ["licenciamento", "royalty", "1/3 ao inventor", "deduções"]
+    questions: ["q2"],
+    keywords: ["deduções", "custos taxativos", "rateio"]
   },
   propriedade: {
     id: "propriedade",
@@ -53,23 +53,6 @@ export const BLOCKS = {
 };
 
 export const QUESTIONS = {
-  q1: {
-    tag: "Bloco 1 · #1",
-    clause: "Cl. 3 — Propriedade Intelectual",
-    title: "Participação em receitas futuras da PI",
-    keywords: ["receita futura", "1/3 inventor", "sobre o líquido"],
-    contract: "Cl. 3.1: \"Todo 'Resultado Protegível' desenvolvido em coautoria será de propriedade comum. A quota-parte será de 50% para cada parte, salvo se o TEP específico definir proporção distinta com base na contribuição inventiva.\" — o contrato é silente quanto à divisão de receitas futuras (royalty, licenciamento, venda).",
-    why: "Hoje o contrato só fala de copropriedade 50/50 da PI, mas não diz quanto eu recebo quando a PI gerar dinheiro (licença, royalty, venda).",
-    ask: "Além do valor do TEP por projeto, quando a PI gerar receita futura (licenciamento, royalty, venda), como a gente divide?",
-    suggestion: "Vi que ICTs como MCTI sugere e ICTs adotam com 1/3 pro inventor sobre o líquido — faz sentido pra vocês também?",
-    options: [
-      { value: "a", label: "1/3 (33%) pro inventor sobre o líquido", type: "solution_best" },
-      { value: "b", label: "Faixa escalonada — 50% até R$ 100k, 33% acima", type: "solution_alt" },
-      { value: "c", label: "Definir caso a caso em cada TEP", type: "solution_weak" },
-      { value: "d", label: "Advogada retornará com análise", type: "lawyer" },
-      { value: "e", label: "Outro (texto aberto)", type: "open" }
-    ]
-  },
   q2: {
     tag: "Bloco 1 · #2",
     clause: "Cl. 3.2 — Gestão de custos",
@@ -83,23 +66,6 @@ export const QUESTIONS = {
       { value: "a", label: "Lista taxativa: depósito, anuidades, PCT, auditoria, impostos", type: "solution_best" },
       { value: "b", label: "Lista taxativa + teto de 15% de despesas administrativas", type: "solution_alt" },
       { value: "c", label: "Fica em aberto, acordado por TEP", type: "solution_weak" },
-      { value: "d", label: "Advogada retornará com análise", type: "lawyer" },
-      { value: "e", label: "Outro (texto aberto)", type: "open" }
-    ]
-  },
-  q3: {
-    tag: "Bloco 1 · #3",
-    clause: "Cl. 3.1 — Contribuição inventiva",
-    title: 'Como medir "contribuição inventiva"',
-    keywords: ["50/50 padrão", "alteração no TEP", "metodologia"],
-    contract: "Cl. 3.1: \"A quota-parte será de 50% para cada parte, salvo se o TEP específico definir proporção distinta com base na contribuição inventiva.\" — não há metodologia objetiva no contrato para medir essa contribuição.",
-    why: 'A cláusula 3.1 permite o TEP alterar a proporção 50/50 "com base na contribuição inventiva". Mas não diz como medir isso.',
-    ask: "Como vocês pensam medir isso? Tem alguma metodologia?",
-    suggestion: "Só pra eu entender antes de chegar no primeiro TEP.",
-    options: [
-      { value: "a", label: "50/50 padrão, alteração só com acordo escrito", type: "solution_best" },
-      { value: "b", label: "Metodologia objetiva: horas técnicas + infraestrutura usada", type: "solution_alt" },
-      { value: "c", label: "Critério do NIT (Instituto decide)", type: "solution_weak" },
       { value: "d", label: "Advogada retornará com análise", type: "lawyer" },
       { value: "e", label: "Outro (texto aberto)", type: "open" }
     ]

@@ -1,10 +1,13 @@
 // Persistência cifrada AES-GCM usando a masterKey derivada do token ativo.
 // Quando há sessão válida, as respostas são sempre cifradas. Sem sessão,
 // seguem em texto claro (para o modo "sem token" de desenvolvimento).
+//
+// Formato de resposta (v5 — 3 opções):
+//   { response: "agree"|"disagree"|"conditional", ressalva_text: string|null, timestamp: string }
 
 import { getSessionMasterKey, hasSessionMasterKey } from "./tokens";
 
-const STORAGE_KEY = "pauta-cit-respostas-v3";
+const STORAGE_KEY = "pauta-cit-respostas-v5";
 
 function b64(buf) {
   return btoa(String.fromCharCode(...new Uint8Array(buf)));
@@ -48,24 +51,42 @@ export function clearAnswers() {
   localStorage.removeItem(STORAGE_KEY);
 }
 
+const RESPONSE_LABELS = {
+  agree: "CONCORDO",
+  disagree: "DISCORDO (propor nova depois)",
+  conditional: "CONCORDO COM RESSALVAS"
+};
+
 export function exportAnswersAsJson(answers, questions) {
+  const stats = {
+    total_perguntas: Object.keys(questions).length,
+    respondidas: Object.keys(answers).length,
+    concordo: Object.values(answers).filter(a => a.response === "agree").length,
+    ressalvas: Object.values(answers).filter(a => a.response === "conditional").length,
+    discordo: Object.values(answers).filter(a => a.response === "disagree").length
+  };
+
   const output = {
     metadata: {
       app: "Pauta CIT AI TECH",
-      exportedAt: new Date().toISOString(),
-      version: "2.1.0"
+      versao: "5.0.0",
+      sistema_resposta: "concordo / discordo / ressalvas",
+      exportadoEm: new Date().toISOString()
     },
+    estatisticas: stats,
     respostas: Object.entries(answers).map(([qid, ans]) => ({
       pergunta_id: qid,
       pergunta: questions[qid]?.title || "",
       clausula: questions[qid]?.clause || "",
-      resposta_selecionada: ans.selected || null,
-      resposta_label: ans.label || null,
-      tipo: ans.type || null,
-      texto_aberto: ans.open_text || null,
+      pergunta_completa: questions[qid]?.ask || "",
+      sugestao_mandato: questions[qid]?.suggestion || "",
+      decisao: ans.response,
+      decisao_label: RESPONSE_LABELS[ans.response] || ans.response,
+      ressalva_texto: ans.ressalva_text || null,
       respondido_em: ans.timestamp || null
     }))
   };
+
   const blob = new Blob([JSON.stringify(output, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -121,12 +142,23 @@ export async function exportAnswersAsPdf(answers, questions, blocks) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.text(`Exportado em ${dtStr}`, margin, 50);
+
   const totalQ = Object.keys(questions).length;
   const answered = Object.keys(answers).length;
-  doc.text(`${answered}/${totalQ} respondidas`, pageW - margin, 50, { align: "right" });
+  const agreeCount = Object.values(answers).filter(a => a.response === "agree").length;
+  const conditionalCount = Object.values(answers).filter(a => a.response === "conditional").length;
+  const disagreeCount = Object.values(answers).filter(a => a.response === "disagree").length;
+  doc.text(`${answered}/${totalQ} respondidas · ${agreeCount} concordo · ${conditionalCount} ressalvas · ${disagreeCount} discordo`, pageW - margin, 50, { align: "right" });
 
   y = 90;
   doc.setTextColor(30, 30, 30);
+
+  // Response type styles for PDF
+  const respStyle = {
+    agree:       { label: "CONCORDO",            color: [16, 129, 90] },
+    disagree:    { label: "DISCORDO",            color: [200, 30, 30] },
+    conditional: { label: "CONCORDO COM RESSALVAS", color: [180, 100, 10] }
+  };
 
   // Blocos ordenados
   for (const block of Object.values(blocks)) {
@@ -155,27 +187,15 @@ export async function exportAnswersAsPdf(answers, questions, blocks) {
         y += 2;
       }
       writeWrapped(`Pergunta: ${q.ask}`, margin, pageW - margin * 2, { size: 9 });
+      writeWrapped(`Sugestão: ${q.suggestion}`, margin, pageW - margin * 2, { size: 8, color: [100, 100, 100] });
 
       if (a) {
-        const typeLabel = {
-          solution_best: "IDEAL",
-          solution_alt: "ALTERNATIVA",
-          solution_weak: "ACEITÁVEL",
-          lawyer: "ADVOGADA",
-          open: "OUTRO"
-        }[a.type] || "?";
-        const color = {
-          solution_best: [16, 129, 90],
-          solution_alt: [30, 64, 175],
-          solution_weak: [146, 64, 14],
-          lawyer: [91, 33, 182],
-          open: [55, 65, 81]
-        }[a.type] || [55, 65, 81];
-        writeWrapped(`Resposta [${typeLabel}]: ${a.label}`, margin, pageW - margin * 2, {
-          size: 9, bold: true, color
+        const style = respStyle[a.response] || { label: "?", color: [55, 65, 81] };
+        writeWrapped(`Resposta: ${style.label}`, margin, pageW - margin * 2, {
+          size: 9, bold: true, color: style.color
         });
-        if (a.type === "open" && a.open_text) {
-          writeWrapped(`Texto: ${a.open_text}`, margin + 10, pageW - margin * 2 - 10, { size: 9 });
+        if (a.response === "conditional" && a.ressalva_text) {
+          writeWrapped(`Ressalva: ${a.ressalva_text}`, margin + 10, pageW - margin * 2 - 10, { size: 9 });
         }
         const when = a.timestamp ? new Date(a.timestamp).toLocaleString("pt-BR") : "—";
         writeWrapped(`Respondida em: ${when}`, margin, pageW - margin * 2, {
@@ -198,7 +218,7 @@ export async function exportAnswersAsPdf(answers, questions, blocks) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(140, 140, 140);
-    doc.text(`Pauta CIT AI TECH · ${dtStr}`, margin, pageH - 20);
+    doc.text(`Pauta CIT AI TECH v5.0 · ${dtStr}`, margin, pageH - 20);
     doc.text(`Pág. ${i}/${pages}`, pageW - margin, pageH - 20, { align: "right" });
   }
 

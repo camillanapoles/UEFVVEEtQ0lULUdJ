@@ -1,17 +1,17 @@
 import React, { useEffect, useState } from "react";
 import {
-  DollarSign, ShieldCheck, AlertTriangle, Settings, Truck,
-  ChevronRight, X, CheckCircle2, Sparkles,
-  FileText, Lightbulb, Target, ArrowLeft,
-  Download, Trash2, Lock, KeyRound, Copy, Plus, FileDown
+  DollarSign, ShieldCheck, AlertTriangle, Settings, Truck, Network,
+  ChevronRight, X, CheckCircle2, XCircle, Sparkles,
+  FileText, Lightbulb, Target, ArrowLeft, Table2, FileCode2,
+  Download, Trash2, Lock, KeyRound, Copy, Plus, FileDown, AlertCircle
 } from "lucide-react";
 
-import { BLOCKS, QUESTIONS, COLOR_MAP, OPTION_STYLES, findBlock } from "./lib/data";
+import { BLOCKS, QUESTIONS, COLOR_MAP, PROJECT_CATEGORIES, INSUMOS_TABLE, RESPONSE_TYPES, findBlock } from "./lib/data";
 import { saveAnswers, loadAnswers, clearAnswers, exportAnswersAsJson, exportAnswersAsPdf } from "./lib/storage";
 import { hasValidSession, validateToken, clearSession } from "./lib/access";
 import { hasTokens, bootstrapAndUnlock, generateNewToken, listTokensMeta, purgeAll } from "./lib/tokens";
 
-const ICON_MAP = { DollarSign, ShieldCheck, AlertTriangle, Settings, Truck };
+const ICON_MAP = { DollarSign, ShieldCheck, AlertTriangle, Settings, Truck, Network };
 
 export default function App() {
   const [accessGranted, setAccessGranted] = useState(hasValidSession());
@@ -126,7 +126,6 @@ function MainApp({ initialIssuedToken, onLock }) {
     (async () => {
       try {
         const data = await loadAnswers();
-        // Prune respostas órfãs (perguntas removidas em versões anteriores)
         const pruned = Object.fromEntries(
           Object.entries(data).filter(([qid]) => QUESTIONS[qid])
         );
@@ -144,7 +143,6 @@ function MainApp({ initialIssuedToken, onLock }) {
     saveAnswers(answers).catch(console.error);
   }, [answers, loaded]);
 
-  // Ao receber token recém-gerado (bootstrap), abre o modal para exibi-lo.
   useEffect(() => {
     if (initialIssuedToken) setTokenModalOpen(true);
   }, [initialIssuedToken]);
@@ -153,12 +151,10 @@ function MainApp({ initialIssuedToken, onLock }) {
   const completedCount = Object.keys(answers).length;
   const progress = Math.round((completedCount / totalQuestions) * 100);
 
-  const handleAnswer = (qid, option, openText) => {
+  const handleAnswer = (qid, response, ressalvaText) => {
     const entry = {
-      selected: option.value,
-      label: option.label,
-      type: option.type,
-      open_text: option.type === "open" ? (openText || "").trim() : null,
+      response,
+      ressalva_text: response === "conditional" ? (ressalvaText || "").trim() : null,
       timestamp: new Date().toISOString()
     };
     setAnswers((prev) => ({ ...prev, [qid]: entry }));
@@ -178,6 +174,12 @@ function MainApp({ initialIssuedToken, onLock }) {
     }
   };
 
+  const stats = {
+    agree: Object.values(answers).filter(a => a.response === "agree").length,
+    disagree: Object.values(answers).filter(a => a.response === "disagree").length,
+    conditional: Object.values(answers).filter(a => a.response === "conditional").length
+  };
+
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-900 font-sans antialiased">
       {tokenModalOpen && freshToken && (
@@ -194,13 +196,22 @@ function MainApp({ initialIssuedToken, onLock }) {
               <FileText size={18} />
             </div>
             <div className="min-w-0">
-              <h1 className="text-base sm:text-lg font-semibold tracking-tight truncate">Pauta da Reunião · CIT AI TECH</h1>
+              <h1 className="text-base sm:text-lg font-semibold tracking-tight truncate">Pauta · CIT AI TECH</h1>
               <p className="text-xs text-slate-500 truncate">{totalQuestions} perguntas · {Object.keys(BLOCKS).length} blocos · ~45 min</p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <div className="hidden sm:flex items-center gap-2 mr-2">
-              <div className="w-28 h-1.5 rounded-full bg-slate-200 overflow-hidden">
+            <div className="hidden md:flex items-center gap-3 mr-2">
+              <div className="flex items-center gap-1 text-xs">
+                <CheckCircle2 size={14} className="text-emerald-500" /> <span className="font-medium">{stats.agree}</span>
+              </div>
+              <div className="flex items-center gap-1 text-xs">
+                <AlertCircle size={14} className="text-amber-500" /> <span className="font-medium">{stats.conditional}</span>
+              </div>
+              <div className="flex items-center gap-1 text-xs">
+                <XCircle size={14} className="text-rose-500" /> <span className="font-medium">{stats.disagree}</span>
+              </div>
+              <div className="w-20 h-1.5 rounded-full bg-slate-200 overflow-hidden">
                 <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-500" style={{ width: `${progress}%` }} />
               </div>
               <span className="text-xs font-medium text-slate-600 tabular-nums">{completedCount}/{totalQuestions}</span>
@@ -247,13 +258,13 @@ function MainApp({ initialIssuedToken, onLock }) {
           block={findBlock(activeQuestion)}
           currentAnswer={answers[activeQuestion]}
           onClose={() => setActiveQuestion(null)}
-          onAnswer={(opt, txt) => { handleAnswer(activeQuestion, opt, txt); }}
+          onAnswer={(resp, txt) => { handleAnswer(activeQuestion, resp, txt); }}
         />
       )}
 
       <footer className="max-w-6xl mx-auto px-4 sm:px-6 pb-12 pt-4">
         <div className="text-center text-xs text-slate-400 space-y-1">
-          <div>Clique em cada bloco → pergunta. Marque a resposta. Dados salvos e cifrados localmente.</div>
+          <div>3 opções por pergunta: <span className="font-medium text-emerald-600">CONCORDO</span> · <span className="font-medium text-amber-600">RESSALVAS</span> · <span className="font-medium text-rose-600">DISCORDO</span></div>
           <div className="flex items-center justify-center gap-1">
             <Lock size={10} /> AES-GCM · chave mestra por token (FIFO máx. 5)
           </div>
@@ -262,6 +273,8 @@ function MainApp({ initialIssuedToken, onLock }) {
     </div>
   );
 }
+
+/* ─── Token management ─── */
 
 function TokenAdminButton({ onIssued }) {
   const [open, setOpen] = useState(false);
@@ -414,6 +427,8 @@ function TokenRevealModal({ token, onClose }) {
   );
 }
 
+/* ─── Mind map ─── */
+
 function MindMap({ onOpenBlock, answers, total }) {
   return (
     <div className="relative">
@@ -422,7 +437,7 @@ function MindMap({ onOpenBlock, answers, total }) {
           <Sparkles size={12} /> Mapa mental da negociação
         </div>
         <h2 className="text-2xl sm:text-4xl font-semibold tracking-tight mb-3">Contrato CIT AI TECH</h2>
-        <p className="text-sm sm:text-base text-slate-600 max-w-xl mx-auto">{total} perguntas em {Object.keys(BLOCKS).length} blocos. Toque em qualquer bloco para abrir as perguntas.</p>
+        <p className="text-sm sm:text-base text-slate-600 max-w-xl mx-auto">{total} pontos em {Object.keys(BLOCKS).length} blocos. Toque em qualquer bloco para abrir.</p>
       </div>
 
       <div className="flex justify-center mb-8 sm:mb-12">
@@ -443,15 +458,13 @@ function MindMap({ onOpenBlock, answers, total }) {
           const c = COLOR_MAP[block.color];
           const Icon = ICON_MAP[block.iconName];
           return (
-            <button key={block.id} onClick={() => onOpenBlock(block.id)}
-              className={`group relative text-left p-5 rounded-2xl bg-white border ${c.border} ${c.bgHover} transition-all duration-200 hover:scale-[1.015] hover:shadow-xl active:scale-[0.99] focus:outline-none focus:ring-2 ${c.ring} focus:ring-offset-2 min-h-[180px]`}
-              aria-label={`Abrir bloco ${block.title}`}>
+            <button key={block.id} onClick={() => onOpenBlock(block.id)} className={`group relative text-left p-5 rounded-2xl bg-white border ${c.border} ${c.bgHover} transition-all duration-200 hover:scale-[1.015] hover:shadow-xl active:scale-[0.99] focus:outline-none focus:ring-2 ${c.ring} focus:ring-offset-2 min-h-[180px]`}>
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${c.gradient} flex items-center justify-center text-white shadow-lg shrink-0`}>
                   <Icon size={20} />
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Bloco {idx + 1}</div>
+                  <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Bloco {idx}</div>
                   <div className={`text-xs font-semibold ${c.textMuted}`}>{blockCompleted}/{blockTotal}</div>
                 </div>
               </div>
@@ -464,12 +477,7 @@ function MindMap({ onOpenBlock, answers, total }) {
                 <div className="flex gap-1">
                   {block.questions.map(qid => {
                     const a = answers[qid];
-                    const color = !a ? "bg-slate-200" :
-                      a.type === "solution_best" ? "bg-emerald-500" :
-                      a.type === "solution_alt" ? "bg-blue-500" :
-                      a.type === "solution_weak" ? "bg-amber-500" :
-                      a.type === "lawyer" ? "bg-violet-500" :
-                      "bg-slate-500";
+                    const color = !a ? "bg-slate-200" : a.response === "agree" ? "bg-emerald-500" : a.response === "conditional" ? "bg-amber-500" : "bg-rose-500";
                     return <div key={qid} className={`w-2 h-2 rounded-full transition-colors ${color}`} />;
                   })}
                 </div>
@@ -483,12 +491,11 @@ function MindMap({ onOpenBlock, answers, total }) {
       </div>
 
       <div className="mt-10 sm:mt-14 max-w-3xl mx-auto">
-        <div className="bg-white/60 border border-slate-200 rounded-xl p-4 grid grid-cols-2 sm:grid-cols-5 gap-3 justify-items-center text-center">
+        <div className="bg-white/60 border border-slate-200 rounded-xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-3 justify-items-center text-center">
           <Legend color="bg-slate-200" label="pendente" />
-          <Legend color="bg-emerald-500" label="ideal" />
-          <Legend color="bg-blue-500" label="alternativa" />
-          <Legend color="bg-amber-500" label="aceitável" />
-          <Legend color="bg-violet-500" label="advogada" />
+          <Legend color="bg-emerald-500" label="concordo" />
+          <Legend color="bg-amber-500" label="ressalvas" />
+          <Legend color="bg-rose-500" label="discordo" />
         </div>
       </div>
     </div>
@@ -502,6 +509,8 @@ function Legend({ color, label }) {
     </div>
   );
 }
+
+/* ─── Block view ─── */
 
 function BlockView({ block, onOpenQuestion, answers }) {
   const c = COLOR_MAP[block.color];
@@ -522,36 +531,34 @@ function BlockView({ block, onOpenQuestion, answers }) {
           {block.questions.map((qid, idx) => {
             const q = QUESTIONS[qid];
             const a = answers[qid];
-            const optStyle = a ? OPTION_STYLES[a.type] : null;
+            const respType = a ? RESPONSE_TYPES[a.response] : null;
             return (
               <div key={qid} className="relative pl-12 sm:pl-16">
-                <div className={`absolute left-3 sm:left-5 top-5 w-5 h-5 rounded-full flex items-center justify-center ring-4 ring-white shadow-md ${optStyle ? optStyle.pill : c.bg}`}>
+                <div className="absolute left-3 sm:left-5 top-5 w-5 h-5 rounded-full flex items-center justify-center ring-4 ring-white shadow-md" style={{ background: respType ? respType.color : "#94a3b8" }}>
                   <span className="text-[10px] font-bold text-white">{idx + 1}</span>
                 </div>
-                <button onClick={() => onOpenQuestion(qid)}
-                  className={`group w-full text-left p-4 sm:p-5 bg-white rounded-xl border ${c.border} ${c.bgHover} transition-all duration-150 hover:shadow-md active:scale-[0.995] focus:outline-none focus:ring-2 ${c.ring} focus:ring-offset-2 min-h-[88px]`}
-                  aria-label={`Abrir pergunta ${q.title}`}>
+                <button onClick={() => onOpenQuestion(qid)} className={`group w-full text-left p-4 sm:p-5 bg-white rounded-xl border ${c.border} ${c.bgHover} transition-all duration-150 hover:shadow-md active:scale-[0.995] focus:outline-none focus:ring-2 ${c.ring} focus:ring-offset-2 min-h-[88px]`}>
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex-1 min-w-0">
                       <div className="text-[11px] font-medium text-slate-400 mb-1">{q.clause}</div>
                       <h3 className="text-sm sm:text-base font-semibold text-slate-900 leading-snug">{q.title}</h3>
                     </div>
                     {a && (
-                      <div className={`shrink-0 px-2 py-1 rounded-md text-[10px] font-semibold ${optStyle.bg} ${optStyle.text} border ${optStyle.border}`}>
-                        {optStyle.label}
+                      <div className="shrink-0 px-2 py-1 rounded-md text-[10px] font-bold border" style={{ background: respType.bg, color: respType.color, borderColor: respType.border }}>
+                        {respType.icon} {respType.label}
                       </div>
                     )}
                   </div>
-                  {a && (
-                    <div className="mt-2 text-xs text-slate-600 italic line-clamp-2">
-                      "{a.type === 'open' && a.open_text ? a.open_text : a.label}"
+                  {a && a.ressalva_text && (
+                    <div className="mt-2 text-xs text-slate-600 italic line-clamp-2 bg-amber-50 border-l-2 border-amber-300 pl-2 py-1">
+                      "{a.ressalva_text}"
                     </div>
                   )}
                   <div className="flex flex-wrap gap-1.5 mt-3">
                     {q.keywords.map(kw => <span key={kw} className={`px-2 py-0.5 rounded-md text-[11px] font-medium ${c.chip}`}>{kw}</span>)}
                   </div>
                   <div className={`mt-3 pt-3 border-t border-slate-100 flex items-center justify-end gap-1 text-xs font-medium ${c.textMuted} group-hover:translate-x-0.5 transition-transform`}>
-                    {a ? "Revisar resposta" : "Responder"} <ChevronRight size={14} />
+                    {a ? "Revisar" : "Responder"} <ChevronRight size={14} />
                   </div>
                 </button>
               </div>
@@ -563,20 +570,20 @@ function BlockView({ block, onOpenQuestion, answers }) {
   );
 }
 
+/* ─── Question modal (3 opções) ─── */
+
 function QuestionModal({ qid, question, block, currentAnswer, onClose, onAnswer }) {
   const c = COLOR_MAP[block.color];
-  const [selected, setSelected] = useState(currentAnswer?.selected || null);
-  const [openText, setOpenText] = useState(currentAnswer?.open_text || "");
-
-  const selectedOption = question.options.find((o) => o.value === selected);
+  const [response, setResponse] = useState(currentAnswer?.response || null);
+  const [ressalvaText, setRessalvaText] = useState(currentAnswer?.ressalva_text || "");
 
   const handleSave = () => {
-    if (!selectedOption) return;
-    if (selectedOption.type === "open" && !openText.trim()) {
-      alert("Preencha o campo de texto aberto antes de salvar.");
+    if (!response) return;
+    if (response === "conditional" && !ressalvaText.trim()) {
+      alert("Descreva sua ressalva no campo de texto.");
       return;
     }
-    onAnswer(selectedOption, openText);
+    onAnswer(response, ressalvaText);
     onClose();
   };
 
@@ -601,44 +608,46 @@ function QuestionModal({ qid, question, block, currentAnswer, onClose, onAnswer 
               <Section icon={<FileText size={14} />} label="O que diz o contrato" text={question.contract} contract />
             )}
             <Section icon={<Lightbulb size={14} />} label="Contexto" text={question.why} />
-            <Section icon={<Target size={14} />} label="Pergunta ao CIT" text={question.ask} highlight />
-            <Section icon={<Sparkles size={14} />} label="Sugestão" text={question.suggestion} />
+            <Section icon={<Target size={14} />} label="Pergunta" text={question.ask} highlight />
+            <Section icon={<Sparkles size={14} />} label="Sugestão (mandato)" text={question.suggestion} />
           </div>
 
+          {question.showCategoryTable && <CategoryTable />}
+          {question.showInsumosTable && <InsumosTable />}
+          {question.showClauseRedaction && <ClauseRedaction text={question.clauseRedaction} />}
+
           <div className="pt-4 border-t border-slate-200">
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Resposta do Instituto</div>
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Decisão (escolha única)</div>
             <div className="space-y-2">
-              {question.options.map((opt) => {
-                const style = OPTION_STYLES[opt.type];
-                const isSelected = selected === opt.value;
+              {Object.entries(RESPONSE_TYPES).map(([key, t]) => {
+                const sel = response === key;
                 return (
-                  <button
-                    key={opt.value}
-                    onClick={() => setSelected(opt.value)}
-                    className={`w-full text-left p-3 rounded-xl border-2 transition-all flex items-start gap-3 ${isSelected ? `${style.bg} ${style.border} ring-2 ring-offset-1 ring-slate-400` : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50"}`}
-                  >
-                    <div className={`shrink-0 w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center ${isSelected ? style.pill + " border-transparent" : "border-slate-300"}`}>
-                      {isSelected && <CheckCircle2 size={14} className="text-white" />}
+                  <button key={key} onClick={() => setResponse(key)} className="w-full text-left p-3 rounded-xl border-2 transition-all flex items-center gap-3" style={{
+                    background: sel ? t.bg : "#fff",
+                    borderColor: sel ? t.border : "#e2e8f0",
+                    boxShadow: sel ? `0 0 0 3px ${t.bg}` : "none"
+                  }}>
+                    <div className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ background: sel ? t.color : "#cbd5e1" }}>
+                      {sel && t.icon}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${style.bg} ${style.text}`}>{style.label}</span>
+                    <div className="flex-1">
+                      <div className="font-bold text-sm" style={{ color: sel ? t.color : "#475569" }}>
+                        {t.label}
                       </div>
-                      <div className={`text-sm font-medium ${isSelected ? style.text : "text-slate-800"}`}>{opt.label}</div>
+                      {t.note && <div className="text-[11px] text-slate-500">{t.note}</div>}
                     </div>
                   </button>
                 );
               })}
             </div>
 
-            {selectedOption?.type === "open" && (
-              <textarea
-                value={openText}
-                onChange={(e) => setOpenText(e.target.value)}
-                placeholder="Escreva o que o Instituto respondeu ou anote suas observações..."
-                className="mt-3 w-full p-3 border-2 border-slate-200 rounded-xl focus:border-slate-400 focus:outline-none text-sm resize-none"
-                rows={4}
-              />
+            {response === "conditional" && (
+              <div className="mt-3 p-3 bg-amber-50 border-2 border-amber-200 rounded-xl">
+                <div className="text-xs font-semibold text-amber-800 mb-2 flex items-center gap-1.5">
+                  <AlertCircle size={14} /> Descreva sua ressalva
+                </div>
+                <textarea value={ressalvaText} onChange={(e) => setRessalvaText(e.target.value)} placeholder="Ex: Concordo com 50/50, mas precisamos definir prazo de pagamento de receitas em até 30 dias..." className="w-full p-3 border border-amber-300 rounded-lg focus:border-amber-500 focus:outline-none text-sm resize-none bg-white" rows={4} />
+              </div>
             )}
           </div>
 
@@ -646,12 +655,124 @@ function QuestionModal({ qid, question, block, currentAnswer, onClose, onAnswer 
             <button onClick={onClose} className="py-3 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-sm transition-all min-h-[44px]">
               Cancelar
             </button>
-            <button onClick={handleSave} disabled={!selectedOption} className="py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium text-sm transition-all min-h-[44px] flex items-center justify-center gap-2">
-              <CheckCircle2 size={16} /> Salvar resposta
+            <button onClick={handleSave} disabled={!response} className="py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium text-sm transition-all min-h-[44px] flex items-center justify-center gap-2">
+              <CheckCircle2 size={16} /> Registrar decisão
             </button>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ─── Embedded components ─── */
+
+function CategoryTable() {
+  return (
+    <div className="mb-6 bg-gradient-to-br from-slate-50 to-white border-2 border-slate-200 rounded-xl p-4 sm:p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white">
+          <Table2 size={16} />
+        </div>
+        <div>
+          <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Anexo proposto</div>
+          <div className="text-sm font-semibold text-slate-900">Tabela de Categorização</div>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {PROJECT_CATEGORIES.map((cat) => {
+          const c = COLOR_MAP[cat.color];
+          const bg = cat.color === 'blue' ? '#eff6ff' : '#f5f3ff';
+          return (
+            <div key={cat.id} className={`p-3 rounded-lg border-2 ${c.border}`} style={{ background: bg }}>
+              <div className={`text-sm font-semibold ${c.text} mb-1`}>{cat.name}</div>
+              <div className="text-xs text-slate-600 mb-3">{cat.description}</div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-white/70 rounded-md p-2">
+                  <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">Camilla</div>
+                  <div className="flex items-baseline gap-2 text-xs">
+                    <span><strong>Receita</strong> {cat.receita_camilla}</span>
+                    <span className="text-slate-400">·</span>
+                    <span><strong>Custo</strong> {cat.custo_camilla}</span>
+                  </div>
+                </div>
+                <div className="bg-white/70 rounded-md p-2">
+                  <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">CIT</div>
+                  <div className="flex items-baseline gap-2 text-xs">
+                    <span><strong>Receita</strong> {cat.receita_cit}</span>
+                    <span className="text-slate-400">·</span>
+                    <span><strong>Custo</strong> {cat.custo_cit}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-2 text-[11px] italic text-slate-600">{cat.rationale}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 p-3 bg-slate-100 rounded-lg text-xs text-slate-700 leading-relaxed">
+        <strong>Princípio de simetria:</strong> quem recebe X% das receitas arca com X% dos custos.
+      </div>
+    </div>
+  );
+}
+
+function InsumosTable() {
+  return (
+    <div className="mb-6 bg-gradient-to-br from-rose-50 to-white border-2 border-rose-200 rounded-xl p-4 sm:p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-8 h-8 rounded-lg bg-rose-600 flex items-center justify-center text-white">
+          <Truck size={16} />
+        </div>
+        <div>
+          <div className="text-[10px] font-semibold text-rose-700 uppercase tracking-wider">Modelo proposto</div>
+          <div className="text-sm font-semibold text-slate-900">Insumos & Equipamentos</div>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto -mx-4 sm:mx-0">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="bg-rose-100 text-rose-900">
+              <th className="text-left p-2 font-semibold">Item</th>
+              <th className="text-left p-2 font-semibold">Quem compra</th>
+              <th className="text-left p-2 font-semibold">Quem fica com o ativo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {INSUMOS_TABLE.map((row, i) => (
+              <tr key={i} className="border-b border-rose-100 last:border-b-0">
+                <td className="p-2 font-medium text-slate-800">{row.item}</td>
+                <td className="p-2 text-slate-700">{row.compra}</td>
+                <td className="p-2 text-slate-700">{row.ativo}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function ClauseRedaction({ text }) {
+  return (
+    <div className="mb-6 bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl p-4 sm:p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-white">
+          <FileCode2 size={16} />
+        </div>
+        <div>
+          <div className="text-[10px] font-semibold text-emerald-300 uppercase tracking-wider">Mandato — redação proposta</div>
+          <div className="text-sm font-semibold text-white">Cláusula a inserir/substituir</div>
+        </div>
+      </div>
+      <pre className="text-[11px] sm:text-xs text-slate-100 font-mono whitespace-pre-wrap leading-relaxed bg-slate-950/40 p-3 rounded-lg overflow-x-auto">
+        {text}
+      </pre>
     </div>
   );
 }

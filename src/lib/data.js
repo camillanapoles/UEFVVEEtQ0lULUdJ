@@ -1,27 +1,69 @@
-// Centraliza toda a lógica de dados da pauta.
-// Cada pergunta tem 5 opções de resposta:
-//  - opt1, opt2, opt3: soluções concretas sugeridas
-//  - opt4: "Advogada retornará com análise"
-//  - opt5: "Outro / texto aberto"
+// ============================================================
+// PAUTA CIT v5 — sistema simplificado
+// 3 opções fixas: CONCORDO / DISCORDO / RESSALVAS (texto)
+// 2 categorias: A (compartilhado 50/50) e B (independente 100%)
+// SEM piso 1/3, SEM citar Lei 10.973
+// ============================================================
+
+export const PROJECT_CATEGORIES = [
+  {
+    id: "cat_a",
+    name: "Categoria A — Projeto compartilhado",
+    description: "Ambos contribuem. Default do contrato.",
+    receita_camilla: "50%",
+    custo_camilla: "50%",
+    receita_cit: "50%",
+    custo_cit: "50%",
+    rationale: "Espelha 50/50 da Cl. 3.1. Simetria total.",
+    color: "blue"
+  },
+  {
+    id: "cat_b",
+    name: "Categoria B — Projeto independente seu",
+    description: "Apps, doutorado, clientes diretos sem CIT.",
+    receita_camilla: "100%",
+    custo_camilla: "100%",
+    receita_cit: "0%",
+    custo_cit: "0%",
+    rationale: "Fora do contrato. Sua titularidade exclusiva.",
+    color: "violet"
+  }
+];
+
+export const INSUMOS_TABLE = [
+  { item: "Consumíveis (SMD, resistor, solda)", compra: "Você", ativo: "Você (descartável)" },
+  { item: "Insumos do projeto (chip X, placa Y)", compra: "Você, reembolso via TEP", ativo: "Caso a caso" },
+  { item: "Equipamento durável > R$ 5–10k", compra: "Instituto ou cofinanciado", ativo: "Negociar: se >50% você, fica com você + licença de uso pro Instituto" },
+  { item: "Software / cloud / APIs B2B", compra: "Instituto (CNPJ exigido)", ativo: "Instituto" }
+];
 
 export const BLOCKS = {
+  estrutura: {
+    id: "estrutura",
+    title: "Estrutura da Relação",
+    subtitle: "Quem é o quê nesta parceria",
+    color: "slate",
+    iconName: "Network",
+    questions: ["q15"],
+    keywords: ["parceria", "viabilização", "ICT vs inventora"]
+  },
   remuneracao: {
     id: "remuneracao",
-    title: "Remuneração & PI",
-    subtitle: "Como o dinheiro é dividido",
+    title: "PI, Receitas & Custos",
+    subtitle: "Simetria 50/50 absoluta",
     color: "emerald",
     iconName: "DollarSign",
-    questions: ["q15", "q2"],
-    keywords: ["50/50 simétrico", "deduções taxativas", "sócias plenas"]
+    questions: ["q1", "q1b", "q2"],
+    keywords: ["50/50 simétrico", "categorização", "deduções"]
   },
   propriedade: {
     id: "propriedade",
     title: "Propriedade Intelectual",
-    subtitle: "Quem é dono do quê",
+    subtitle: "Manutenção, abandono, projetos meus",
     color: "blue",
     iconName: "ShieldCheck",
     questions: ["q4", "q5", "q6"],
-    keywords: ["anuidades", "patente", "projetos meus", "abandono"]
+    keywords: ["adiantamento", "recompra", "projetos meus"]
   },
   riscos: {
     id: "riscos",
@@ -30,7 +72,7 @@ export const BLOCKS = {
     color: "amber",
     iconName: "AlertTriangle",
     questions: ["q7", "q8"],
-    keywords: ["multa 10x", "falha de inovação", "teto"]
+    keywords: ["multa 10x", "falha de inovação"]
   },
   infra: {
     id: "infra",
@@ -39,7 +81,7 @@ export const BLOCKS = {
     color: "rose",
     iconName: "Truck",
     questions: ["q13", "q14"],
-    keywords: ["insumos", "chips", "reembolso", "viagens"]
+    keywords: ["insumos", "chips", "viagens"]
   },
   operacional: {
     id: "operacional",
@@ -48,231 +90,189 @@ export const BLOCKS = {
     color: "violet",
     iconName: "Settings",
     questions: ["q10", "q11", "q12"],
-    keywords: ["NF / RPA", "TEP-modelo", "arbitragem", "Recife"]
+    keywords: ["NF / RPA", "TEP-modelo", "arbitragem"]
   }
 };
 
 export const QUESTIONS = {
   q15: {
+    tag: "Bloco 0 · #1",
+    clause: "Cl. 1.1 — Natureza da Aliança",
+    title: "Quem é o quê nesta parceria?",
+    keywords: ["modelo viabilização", "ICT nascente", "lab seu"],
+    why: "A 1.1 fala em 'colaboração técnica' de forma vaga. Como o Instituto está nascendo (sem lab, sem equipe técnica) e eu entro com infraestrutura, capital intelectual prévio, ART e em alguns casos a captação, queria alinhar formalmente o modelo da relação.",
+    ask: "Concordam que esse não é o modelo tradicional 'ICT madura + inventor que usa estrutura ICT', mas sim 'ICT viabilizadora + executora técnica autônoma'?",
+    suggestion: "Adicionar Cl. 1.3 explicitando: ICT como viabilizadora institucional + Camilla como executora técnica com infra própria. Isso facilita calibragem dos TEPs depois."
+  },
+  q1: {
     tag: "Bloco 1 · #1",
-    clause: "Cl. 3.1 — Copropriedade simétrica",
-    title: "50/50 também nas receitas da PI",
-    keywords: ["50/50 simétrico", "sócias plenas", "receitas líquidas", "deduções listadas"],
-    contract: "Cl. 3.1: \"A quota-parte será de 50% para cada parte, salvo se o TEP específico definir proporção distinta com base na contribuição inventiva.\" — define copropriedade 50/50 da PI mas é silente sobre divisão das receitas econômicas (royalty, licenciamento, venda, transferência).",
-    why: "A cláusula 3.1 já estabelece copropriedade 50/50 da PI, o que considero justo dado que aporto laboratório próprio, capital intelectual prévio e responsabilidade técnica. Quero alinhar que essa mesma proporção 50/50 vale também pras receitas econômicas geradas pela PI (licenciamento, royalty, venda, transferência) — sobre o líquido com deduções listadas. Ou seja: nos projetos do contrato, somos sócias de verdade, simétricas em propriedade e em ganhos.",
-    ask: "Topam fixar que a divisão 50/50 da PI vale também pras receitas econômicas (licenciamento, royalty, venda, transferência), sobre o líquido com deduções listadas?",
-    suggestion: "Basta espelhar a 3.1 num parágrafo curto na cláusula 3 — copropriedade 50/50 → ganhos 50/50, mantendo a coerência sem reabrir a estrutura.",
-    options: [
-      { value: "a", label: "50/50 sobre o líquido com deduções taxativas (espelho da 3.1)", type: "solution_best" },
-      { value: "b", label: "50/50 sobre o líquido, deduções definidas no TEP de licenciamento", type: "solution_alt" },
-      { value: "c", label: "Proporção definida caso a caso por TEP", type: "solution_weak" },
-      { value: "d", label: "Advogada retornará com análise", type: "lawyer" },
-      { value: "e", label: "Outro (texto aberto)", type: "open" }
-    ]
+    clause: "Cl. 3 — PI + Receitas + Custos",
+    title: "Simetria 50/50 — propriedade, receitas e custos",
+    keywords: ["50/50 absoluto", "espelho da 3.1", "Cl. 3.5 nova"],
+    why: "A 3.1 já estabelece copropriedade 50/50 da PI, mas o contrato é silente sobre RECEITAS e a 3.2 fala vagamente em 'ratear custos'. Quero coerência total: se sou dona de 50% da PI, recebo 50% das receitas e arco com 50% dos custos.",
+    ask: "Topam estender a regra 50/50 da Cl. 3.1 para receitas e custos, com cláusula de simetria absoluta?",
+    suggestion: "Inserir Cl. 3.5.1 (receitas 50/50), Cl. 3.5.2 (custos 50/50) e Cl. 3.1.1 (alteração só com justificativa técnica E financeira válida documentada + consentimento mútuo escrito). Default sempre 50/50.",
+    showClauseRedaction: true,
+    clauseRedaction: `3.5.1 Receitas: A divisão 50/50 da Cl. 3.1 aplica-se igualmente aos ganhos econômicos da PI (licenciamentos, transferências, royalties, comercialização), sobre o líquido após deduções listadas em 3.6.
+
+3.5.2 Custos: Aplica-se a mesma proporção 50/50 ao rateio de custos de proteção e manutenção da PI.
+
+3.1.1 Alteração: Qualquer alteração da proporção 50/50 (3.1, 3.5.1, 3.5.2) requer justificativa técnica E financeira válida, comprovada por documentação objetiva, com consentimento mútuo escrito e assinado.`
+  },
+  q1b: {
+    tag: "Bloco 1 · #2",
+    clause: "Cl. 3.1 — Categorização",
+    title: "Tabela A/B — projetos compartilhados ou independentes",
+    keywords: ["2 categorias", "A 50/50", "B 100% meu"],
+    why: "A 3.1 permite o TEP alterar 50/50 com base em 'contribuição inventiva' vaga. Em vez disso, categorização clara em DUAS opções: A (compartilhado, 50/50) ou B (independente, 100% meu, fora do contrato).",
+    ask: "Topam adotar a tabela A/B como Anexo ao contrato Master?",
+    suggestion: "Categoria A = projetos do contrato com simetria 50/50 absoluta. Categoria B = projetos meus independentes, fora do escopo do contrato. Sem outras categorias, sem percentuais intermediários.",
+    showCategoryTable: true
   },
   q2: {
-    tag: "Bloco 1 · #2",
-    clause: "Cl. 3.2 — Gestão de custos",
-    title: "Custos deduzidos antes da divisão",
+    tag: "Bloco 1 · #3",
+    clause: "Cl. 3.6 (nova)",
+    title: "Lista taxativa de deduções",
     keywords: ["taxativo", "depósito", "anuidades", "PCT"],
     contract: "Cl. 3.2: \"As partes obrigam-se a ratear todas as despesas de depósito, buscas de anterioridade e anuidades perante o INPI e órgãos internacionais (como USPTO ou EPO).\" — sem lista taxativa nem teto de despesas administrativas.",
-    why: "A cláusula fala de rateio de custos, mas sem listar o quê exatamente. Isso pode diluir minha parte depois.",
-    ask: "Se houver licenciamento, quais custos vocês deduzem antes de dividir?",
-    suggestion: "Pergunto porque normalmente as ICTs listam tudo de forma bem detalhada pra evitar mal-entendido depois.",
-    options: [
-      { value: "a", label: "Lista taxativa: depósito, anuidades, PCT, auditoria, impostos", type: "solution_best" },
-      { value: "b", label: "Lista taxativa + teto de 15% de despesas administrativas", type: "solution_alt" },
-      { value: "c", label: "Fica em aberto, acordado por TEP", type: "solution_weak" },
-      { value: "d", label: "Advogada retornará com análise", type: "lawyer" },
-      { value: "e", label: "Outro (texto aberto)", type: "open" }
-    ]
+    why: "Sem lista taxativa, o Instituto poderia adicionar 'despesas administrativas' ou 'overhead de NIT' antes da divisão e diluir minha parte.",
+    ask: "Topam fechar a lista de deduções admissíveis e proibir overhead administrativo?",
+    suggestion: "Lista taxativa: depósito INPI/USPTO/EPO, anuidades, agente PI, auditoria, busca anterioridade, tributos do licenciamento. Itens não listados não podem ser deduzidos. Vedado: salários NIT, despesas admin gerais, custos de captação.",
+    showClauseRedaction: true,
+    clauseRedaction: `3.6 LISTA DE DEDUÇÕES ADMISSÍVEIS:
+a) custos de depósito e proteção (INPI, USPTO, EPO, PCT);
+b) anuidades nacionais e internacionais;
+c) honorários de agente da propriedade industrial;
+d) custos de auditoria e due diligence;
+e) tributos diretamente vinculados ao licenciamento;
+f) custos de busca de anterioridade.
+
+§1º Itens não listados acima não podem ser deduzidos nem rateados sem aditivo específico.
+§2º NÃO constituem custos rateáveis: despesas administrativas gerais do Instituto, salários de equipe do NIT, custos de captação ou prospecção de licenciados.`
   },
   q4: {
-    tag: "Bloco 2 · #4",
-    clause: "Cl. 3.3 — Prazo de 45 dias",
-    title: "Prazo de 45 dias aperta pra PF",
-    keywords: ["USPTO/EPO caros", "90 dias", "adiantamento com abatimento"],
+    tag: "Bloco 2 · #1",
+    clause: "Cl. 3.7.1 (nova)",
+    title: "Adiantamento sem juros por aperto de caixa",
+    keywords: ["USPTO/EPO caros", "12 meses", "ressarcimento sem juros"],
     contract: "Cl. 3.3: \"Caso uma das partes manifeste desinteresse ou deixe de pagar sua quota de manutenção por mais de 45 dias, a outra parte poderá assumir integralmente os custos e requerer a adjudicação compulsória da quota-parte inadimplente, tornando-se titular única do ativo para evitar sua caducidade.\"",
-    why: "Depósito internacional (USPTO, EPO via PCT) é caro, tipo R$ 10-30k por ativo, e eu sou PF.",
-    ask: "Topam estender pra 90 dias + o Instituto adiantar minha parte com abatimento futuro em royalty?",
-    suggestion: "Assim a gente não perde patente por aperto pontual de caixa meu.",
-    options: [
-      { value: "a", label: "90 dias + adiantamento com abatimento em royalty", type: "solution_best" },
-      { value: "b", label: "Só estender pra 90 dias (sem adiantamento)", type: "solution_alt" },
-      { value: "c", label: "Manter 45 dias", type: "solution_weak" },
-      { value: "d", label: "Advogada retornará com análise", type: "lawyer" },
-      { value: "e", label: "Outro (texto aberto)", type: "open" }
-    ]
+    why: "Depósito internacional via PCT custa R$ 10-30k por ativo. Como sou PF, posso ter aperto pontual de caixa.",
+    ask: "Topam cláusula de adiantamento mútuo sem juros, ressarcimento em até 12 meses ou na próxima receita?",
+    suggestion: "Cl. 3.7.1 — qualquer parte pode adiantar a cota da outra, ressarcimento sem juros até a próxima receita do projeto, ou em até 12 meses, o que ocorrer primeiro. Protege ambos contra perda da PI por aperto temporário.",
+    showClauseRedaction: true,
+    clauseRedaction: `3.7.1 Adiantamento por aperto de caixa: Se uma das partes não puder honrar sua cota de custos no prazo, a outra parte poderá adiantar o valor, com direito a ressarcimento sem juros até a próxima receita do projeto, ou em até 12 meses, o que ocorrer primeiro.`
   },
   q5: {
-    tag: "Bloco 2 · #5",
-    clause: "Cl. 3 — Abandono de ativos",
-    title: "Direito de assumir ativo que seria abandonado",
-    keywords: ["reversão", "UnB faz isso", "evita perder patente"],
+    tag: "Bloco 2 · #2",
+    clause: "Cl. 3.7.2 e 3.7.3",
+    title: "90 dias + oferta prévia + recompra em 24 meses",
+    keywords: ["inércia 90d", "oferta prévia", "recompra SELIC"],
     contract: "Cl. 3.3 + Cl. 3.4: prevê adjudicação compulsória por inadimplência (45 dias) e direito de preferência na aquisição da quota-parte da outra. NÃO há cláusula de reversão automática ao inventor quando o Instituto decide abandonar a manutenção.",
-    why: "Se vocês decidirem não manter uma anuidade (abandonar o ativo), a patente caduca. Mas eu posso querer continuar sozinha.",
-    ask: "Antes de abandonar de vez, topam me oferecer a chance de assumir sozinha?",
-    suggestion: "Vi que a UnB faz isso automaticamente por regulamento interno — me pareceu bem justo.",
-    options: [
-      { value: "a", label: "Reversão automática ao inventor por silêncio (modelo UnB)", type: "solution_best" },
-      { value: "b", label: "Notificação prévia + 60 dias pra eu assumir", type: "solution_alt" },
-      { value: "c", label: "Caso a caso, sem regra fixa", type: "solution_weak" },
-      { value: "d", label: "Advogada retornará com análise", type: "lawyer" },
-      { value: "e", label: "Outro (texto aberto)", type: "open" }
-    ]
+    why: "Os 45 dias da Cl. 3.3 são curtos demais — viagei, esqueci, ou tive imprevisto, perco a quota.",
+    ask: "Topam estender pra 90 dias + oferta prévia obrigatória + direito de recompra em 24 meses?",
+    suggestion: "Cl. 3.7.2 (90d + notificação + oferta) e Cl. 3.7.3 (recompra valor + SELIC em 24 meses).",
+    showClauseRedaction: true,
+    clauseRedaction: `3.7.2 Inércia caracterizada: Apenas após 90 dias de inadimplência (ampliado dos 45 dias originais), notificação formal e oferta prévia de assunção de cota pela outra parte sem ressarcimento, fica caracterizada inércia para fins de adjudicação compulsória.
+
+3.7.3 Direito de Recompra: A parte adjudicada conserva direito de recomprar sua cota original em até 24 meses, pelo valor pago + correção SELIC.`
   },
   q6: {
-    tag: "Bloco 2 · #6",
-    clause: 'Cl. 3.1 — "Resultado Protegível"',
-    title: "Meus projetos independentes ficam comigo",
-    keywords: ["apps próprios", "doutorado", "preferência da ICT"],
+    tag: "Bloco 2 · #3",
+    clause: "Cl. 3.1 — \"Resultado Protegível\"",
+    title: "Categoria B — projetos meus independentes",
+    keywords: ["apps próprios", "doutorado", "baseline declaratório"],
     contract: "Cl. 1.2: \"A CONTRATADA atuará com absoluta autonomia profissional, sem subordinação… não estando sujeita a controle de jornada ou exclusividade, salvo se houver conflito de interesses direto com projetos do Instituto.\" + Cl. 3.1 (Resultado Protegível em coautoria). Não há baseline formal de PI pré-existente da inventora.",
-    why: "Tenho apps que já desenvolvo, pesquisas do meu doutorado, trabalhos paralelos sem relação com o Instituto.",
-    ask: "Topam colocar uma linha clara dizendo que esses ficam 100% comigo, e definindo preferencialmente a parceria com a ICT para projetos novos?",
-    suggestion: 'Só pra evitar qualquer ambiguidade futura sobre "Resultado Protegível".',
-    options: [
-      { value: "a", label: "Projetos independentes 100% meus + declaração inicial de baseline", type: "solution_best" },
-      { value: "b", label: "100% meus, sem baseline formal", type: "solution_alt" },
-      { value: "c", label: "Manter como está (revisão caso a caso)", type: "solution_weak" },
-      { value: "d", label: "Advogada retornará com análise", type: "lawyer" },
-      { value: "e", label: "Outro (texto aberto)", type: "open" }
-    ]
+    why: "Tenho apps que já desenvolvo, pesquisas do meu doutorado, trabalhos paralelos. Quero deixar claro que esses são Categoria B — 100% meus, fora do escopo do contrato.",
+    ask: "Topam declaração formal de baseline (Anexo II com lista de projetos pré-existentes) + Cláusula de Categoria B explícita?",
+    suggestion: "Anexo II com baseline (assinado na entrada) + redação clara: 'Projetos sem uso de recursos do CIT são Categoria B — 100% da CONTRATADA, fora do escopo deste contrato'."
   },
   q7: {
-    tag: "Bloco 3 · #7",
+    tag: "Bloco 3 · #1",
     clause: "Cl. 6.2 — Multa de 10x",
     title: "Multa de 10x me deu um friozinho",
-    keywords: ["proporcional", "1-2x", "teto absoluto", "escopo"],
+    keywords: ["proporcional", "1-2x", "teto absoluto"],
     contract: "Cl. 6.2: \"A violação das cláusulas de Propriedade Intelectual, Confidencialidade ou Não-Evasão sujeitará o infrator ao pagamento de multa de 10x o valor do maior projeto realizado, cumulada com perdas e danos apurados.\" Cl. 6.1 (mora) já é separada (2% / teto 10%).",
-    why: "10x o valor do maior projeto é muito — contratos parecidos de ICTs ficam entre 1x e 2x o valor do projeto específico.",
-    ask: "Topam repensar pra algo mais proporcional? E ela vale só pra PI/confidencialidade mesmo, ou pega outras coisas?",
-    suggestion: "Um teto absoluto dá segurança pros dois lados.",
-    options: [
-      { value: "a", label: "2x o TEP específico + teto R$ 200k + só PI/sigilo", type: "solution_best" },
-      { value: "b", label: "2x o TEP específico, sem teto absoluto", type: "solution_alt" },
-      { value: "c", label: "Reduzir pra 5x (meio-termo)", type: "solution_weak" },
-      { value: "d", label: "Advogada retornará com análise", type: "lawyer" },
-      { value: "e", label: "Outro (texto aberto)", type: "open" }
-    ]
+    why: "10x o valor do maior projeto é desproporcional — contratos parecidos de ICTs ficam entre 1x e 2x o valor do projeto específico, com teto em reais.",
+    ask: "Topam 2x o TEP específico + teto absoluto + apenas para PI/confidencialidade?",
+    suggestion: "Reduzir pra 2x o TEP específico onde a violação ocorreu, com teto de R$ 200k, restrita a violações de PI/confidencialidade/não-evasão."
   },
   q8: {
-    tag: "Bloco 3 · #8",
+    tag: "Bloco 3 · #2",
     clause: "Novo — Risco de inovação",
     title: "E se o projeto não viabilizar?",
     keywords: ["risco intrínseco", "sem multa", "PI parcial"],
     contract: "Cl. 2.2: \"O não cumprimento de um marco técnico (Milestone) autoriza a retenção do pagamento proporcional até a devida correção.\" — o contrato trata só inadimplemento de marco; é silente quanto a inviabilização técnica/de mercado (risco intrínseco a P&D).",
-    why: "Todo projeto de pesquisa tem risco de não viabilizar tecnicamente ou o mercado não responder.",
+    why: "Todo projeto de pesquisa tem risco de não viabilizar tecnicamente ou o mercado não responder. O contrato não trata disso.",
     ask: "Como será lidado nesses casos?",
-    suggestion: "O normal em ICTs é: o que foi pago até ali fica, sem multa, PI parcial em copropriedade.",
-    options: [
-      { value: "a", label: "Sem multa + pago fica + PI parcial em copropriedade", type: "solution_best" },
-      { value: "b", label: "Sem multa + pago fica + PI volta integralmente ao inventor", type: "solution_alt" },
-      { value: "c", label: "Analisar caso a caso", type: "solution_weak" },
-      { value: "d", label: "Advogada retornará com análise", type: "lawyer" },
-      { value: "e", label: "Outro (texto aberto)", type: "open" }
-    ]
+    suggestion: "Em caso de falha técnica ou de mercado: o pago fica, sem multa, PI parcial segue 50/50 ou volta integralmente pra mim."
   },
   q13: {
-    tag: "Bloco 4 · #13",
+    tag: "Bloco 4 · #1",
     clause: "Novo — Infraestrutura do lab",
     title: "Insumos e equipamentos — quem compra?",
-    keywords: ["lab pessoal Recife", "chips", "reembolso", "dono do ativo"],
+    keywords: ["lab pessoal Recife", "chips", "reembolso"],
     contract: "O contrato é silente sobre insumos, equipamentos e propriedade do ativo físico. Cl. 2.1 (TEP) lista apenas Objeto, Milestones, Critérios de Aceite e Remuneração — sem rubrica de infraestrutura.",
-    why: "Meu laboratório é pessoal, aqui em Recife. Pra tocar os projetos preciso comprar insumos (chips, placas, sensores, DevKits, licenças), às vezes valores altos (FPGA, SoC, osciloscópio > R$ 20k).",
-    ask: "Como a gente organiza isso, dado que estou em Recife e vocês em Goiás?",
-    suggestion: "Pensei em modelo híbrido: consumíveis pequenos eu compro e reembolso via TEP; equipamento durável acima de faixa, alinhamos antes por escrito.",
-    options: [
-      { value: "a", label: "Modelo híbrido: eu compro pequenos (reembolso) + Instituto aprova/compra grandes + propriedade do ativo clara em cada caso", type: "solution_best" },
-      { value: "b", label: "Tudo reembolsável mediante NF, sem limite de valor (mas com pré-aprovação acima de R$ 5k)", type: "solution_alt" },
-      { value: "c", label: "Tudo comprado pelo Instituto, enviado a Recife (mais lento mas mais simples)", type: "solution_weak" },
-      { value: "d", label: "Advogada retornará com análise", type: "lawyer" },
-      { value: "e", label: "Outro (texto aberto)", type: "open" }
-    ]
+    why: "Meu laboratório é pessoal, em Recife. Pra tocar projetos preciso comprar insumos (chips, placas, sensores, DevKits, licenças), às vezes valores altos (FPGA, SoC, osciloscópio > R$ 20k).",
+    ask: "Como organizamos isso, dado que estou em Recife e vocês em Goiás?",
+    suggestion: "Modelo híbrido seguindo a tabela abaixo: consumíveis pequenos eu compro e reembolso via TEP; equipamento durável acima de R$ 5k, alinhamos antes por escrito; software B2B fica com vocês (precisa CNPJ).",
+    showInsumosTable: true
   },
   q14: {
-    tag: "Bloco 4 · #14",
-    clause: "Novo — Viagens e reuniões presenciais",
+    tag: "Bloco 4 · #2",
+    clause: "Novo — Viagens",
     title: "Viagens Recife ↔ Goiânia",
-    keywords: ["passagem", "hospedagem", "reunião técnica"],
+    keywords: ["passagem", "hospedagem"],
     contract: "Contrato silente sobre custos de deslocamento. Sede do Instituto em Goiânia (preâmbulo); inventora residente em Pernambuco — distância exige tratamento explícito.",
     why: "Se precisarmos reunião presencial em Goiás ou eu participar de apresentação aí, quem cobre passagem e hospedagem?",
     ask: "Quem arca com custos de viagem quando for necessário eu estar presencialmente aí?",
-    suggestion: "O padrão em ICTs é: viagem a pedido do Instituto, Instituto paga. Viagem por minha conveniência, eu pago.",
-    options: [
-      { value: "a", label: "Viagem a pedido do Instituto = Instituto paga; por minha conveniência = eu pago", type: "solution_best" },
-      { value: "b", label: "Rubrica do TEP cobre viagens quando aplicável", type: "solution_alt" },
-      { value: "c", label: "Caso a caso, sem regra fixa", type: "solution_weak" },
-      { value: "d", label: "Advogada retornará com análise", type: "lawyer" },
-      { value: "e", label: "Outro (texto aberto)", type: "open" }
-    ]
+    suggestion: "Padrão: viagem a pedido do Instituto, Instituto paga; por minha conveniência, eu pago."
   },
   q10: {
-    tag: "Bloco 5 · #10",
+    tag: "Bloco 5 · #1",
     clause: "Cl. 2 — Remuneração",
     title: "Fiscal — RPA ou NF?",
-    keywords: ["RPA ou NF", "IRRF na fonte", "Receita tranquila"],
+    keywords: ["RPA ou NF", "IRRF na fonte"],
     contract: "Cl. 2.2: \"Os valores pagos possuem natureza indenizatória de serviços técnicos e não constituem contraprestação por tempo à disposição.\" + Cl. 4.2 (Indenidade fiscal/previdenciária a cargo da CONTRATADA). Não há menção a NF, RPA ou retenção de IRRF.",
-    why: "O contrato não fala de nota fiscal, RPA, retenção de IRRF. Fica ambíguo pros dois lados perante a Receita.",
+    why: "O contrato não fala de NF, RPA, retenção de IRRF. Fica ambíguo perante a Receita.",
     ask: "Eu emito RPA ou NF de serviço e vocês retêm IRRF?",
-    suggestion: "Podemos colocar um parágrafo curto deixando claro.",
-    options: [
-      { value: "a", label: "Eu emito NF, vocês retêm IRRF (ISS recolhido por mim)", type: "solution_best" },
-      { value: "b", label: "RPA (enquanto eu não tiver CNPJ) + IRRF retido por vocês", type: "solution_alt" },
-      { value: "c", label: "Definir depois, primeiro TEP", type: "solution_weak" },
-      { value: "d", label: "Advogada retornará com análise", type: "lawyer" },
-      { value: "e", label: "Outro (texto aberto)", type: "open" }
-    ]
+    suggestion: "Cláusula clara: NF emitida por mim, IRRF retido na fonte por vocês, ISS recolhido por mim. RPA enquanto não tiver CNPJ ativo."
   },
   q11: {
-    tag: "Bloco 5 · #11",
+    tag: "Bloco 5 · #2",
     clause: "Cl. 2.1 — TEP",
     title: "TEP-modelo já existe ou construímos juntos?",
-    keywords: ["pergunta aberta", "rascunho meu", "padrão futuro"],
+    keywords: ["pergunta aberta", "rascunho meu"],
     contract: "Cl. 2.1: \"Cada projeto será formalizado via Termo de Execução de Projeto (TEP), que especificará: (i) Objeto; (ii) Cronograma de Marcos (Milestones); (iii) Critérios de Aceite; e (iv) Remuneração.\" — define os 4 itens mínimos, mas não anexa template.",
-    why: "Queria entender se vocês já têm um TEP-modelo pronto ou se ainda não existe.",
-    ask: "O Instituto já tem TEP-modelo? Senão, topam a gente montar juntos?",
-    suggestion: "Posso rascunhar uma estrutura simples (objeto, milestones, critérios de aceite, prazos, valor) e vocês ajustam.",
-    options: [
-      { value: "a", label: "Já temos modelo — envio pra você revisar", type: "solution_best" },
-      { value: "b", label: "Não temos ainda — topamos construir juntos (você rascunha, a gente ajusta)", type: "solution_alt" },
-      { value: "c", label: "Vamos criar internamente e apresentar depois", type: "solution_weak" },
-      { value: "d", label: "Advogada retornará com análise", type: "lawyer" },
-      { value: "e", label: "Outro (texto aberto)", type: "open" }
-    ]
+    why: "Queria entender se vocês já têm TEP-modelo pronto ou se vamos construir.",
+    ask: "O Instituto já tem TEP-modelo? Senão, topam construirmos juntos?",
+    suggestion: "Se ainda não existe, posso rascunhar uma estrutura simples (objeto, milestones, aceite, prazos, valor, categoria do projeto). Vira padrão pros próximos."
   },
   q12: {
-    tag: "Bloco 5 · #12",
+    tag: "Bloco 5 · #3",
     clause: "Cl. 7.2 — Arbitragem",
     title: "Arbitragem virtual ou juizado local",
-    keywords: ["logística", "pequenas causas", "juizado daqui"],
+    keywords: ["logística", "pequenas causas"],
     contract: "Cl. 7.2: \"Qualquer disputa remanescente será resolvida de forma definitiva por Arbitragem, administrada por Câmara Arbitral de renome a ser escolhida em comum acordo em Goiânia/GO, conduzida por árbitro único e em conformidade com a Lei 9.307/96.\" + Cl. 7.1 (escalonamento: negociação 7d, mediação 15d) + Cl. 7.3 (foro de Goiânia para urgências).",
-    why: "A 7.2 coloca arbitragem em Goiânia, mas como moro em Recife, arbitragem presencial vira problema de logística.",
-    ask: "Topam arbitragem virtual ou, pra causas menores, a gente usar o juizado daqui?",
-    suggestion: "É só pra caso aconteça algo pequeno não virar problema grande de logística.",
-    options: [
-      { value: "a", label: "Arbitragem virtual + JEC de Recife pra causas até R$ 100k", type: "solution_best" },
-      { value: "b", label: "Arbitragem virtual (sem menção a JEC)", type: "solution_alt" },
-      { value: "c", label: "Manter arbitragem em Goiânia presencial", type: "solution_weak" },
-      { value: "d", label: "Advogada retornará com análise", type: "lawyer" },
-      { value: "e", label: "Outro (texto aberto)", type: "open" }
-    ]
+    why: "A 7.2 coloca arbitragem em Goiânia, mas como moro em Recife, presencial vira problema de logística.",
+    ask: "Topam arbitragem virtual ou, pra causas menores, juizado daqui?",
+    suggestion: "Arbitragem virtual + JEC de Recife pra causas até R$ 100k."
   }
 };
 
+// Sistema de resposta — 3 opções fixas + texto livre nas ressalvas
+export const RESPONSE_TYPES = {
+  agree: { label: "CONCORDO", color: "#10b981", bg: "#ecfdf5", border: "#34d399", icon: "✓" },
+  disagree: { label: "DISCORDO", color: "#dc2626", bg: "#fef2f2", border: "#f87171", icon: "✕", note: "(propor nova depois)" },
+  conditional: { label: "CONCORDO COM RESSALVAS", color: "#d97706", bg: "#fffbeb", border: "#fbbf24", icon: "≈", needsText: true }
+};
+
 export const COLOR_MAP = {
+  slate: { ring: "ring-slate-400", bg: "bg-slate-500", bgHover: "hover:bg-slate-50", text: "text-slate-900", textMuted: "text-slate-700", border: "border-slate-300", gradient: "from-slate-500 to-slate-700", chip: "bg-slate-100 text-slate-800", solid: "#64748b" },
   emerald: { ring: "ring-emerald-400", bg: "bg-emerald-500", bgHover: "hover:bg-emerald-50", text: "text-emerald-900", textMuted: "text-emerald-700", border: "border-emerald-200", gradient: "from-emerald-400 to-emerald-600", chip: "bg-emerald-100 text-emerald-800", solid: "#10b981" },
   blue: { ring: "ring-blue-400", bg: "bg-blue-500", bgHover: "hover:bg-blue-50", text: "text-blue-900", textMuted: "text-blue-700", border: "border-blue-200", gradient: "from-blue-400 to-blue-600", chip: "bg-blue-100 text-blue-800", solid: "#3b82f6" },
   amber: { ring: "ring-amber-400", bg: "bg-amber-500", bgHover: "hover:bg-amber-50", text: "text-amber-900", textMuted: "text-amber-700", border: "border-amber-200", gradient: "from-amber-400 to-amber-600", chip: "bg-amber-100 text-amber-800", solid: "#f59e0b" },
   rose: { ring: "ring-rose-400", bg: "bg-rose-500", bgHover: "hover:bg-rose-50", text: "text-rose-900", textMuted: "text-rose-700", border: "border-rose-200", gradient: "from-rose-400 to-rose-600", chip: "bg-rose-100 text-rose-800", solid: "#f43f5e" },
   violet: { ring: "ring-violet-400", bg: "bg-violet-500", bgHover: "hover:bg-violet-50", text: "text-violet-900", textMuted: "text-violet-700", border: "border-violet-200", gradient: "from-violet-400 to-violet-600", chip: "bg-violet-100 text-violet-800", solid: "#8b5cf6" }
-};
-
-export const OPTION_STYLES = {
-  solution_best: { bg: "bg-emerald-50", border: "border-emerald-300", text: "text-emerald-900", pill: "bg-emerald-500", label: "Ideal" },
-  solution_alt: { bg: "bg-blue-50", border: "border-blue-300", text: "text-blue-900", pill: "bg-blue-500", label: "Alternativa" },
-  solution_weak: { bg: "bg-amber-50", border: "border-amber-300", text: "text-amber-900", pill: "bg-amber-500", label: "Aceitável" },
-  lawyer: { bg: "bg-violet-50", border: "border-violet-300", text: "text-violet-900", pill: "bg-violet-500", label: "Advogada" },
-  open: { bg: "bg-slate-50", border: "border-slate-300", text: "text-slate-900", pill: "bg-slate-600", label: "Outro" }
 };
 
 export const findBlock = (qid) => {

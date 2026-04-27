@@ -6,7 +6,7 @@ import {
   Download, Trash2, Lock, KeyRound, Copy, Plus, FileDown, AlertCircle
 } from "lucide-react";
 
-import { BLOCKS, QUESTIONS, COLOR_MAP, PROJECT_CATEGORIES, INSUMOS_TABLE, RESPONSE_TYPES, findBlock } from "./lib/data";
+import { BLOCKS, QUESTIONS, COLOR_MAP, PROJECT_CATEGORIES, INSUMOS_TABLE, RESPONSE_TYPES, OPTION_STYLES, findBlock } from "./lib/data";
 import { saveAnswers, loadAnswers, clearAnswers, exportAnswersAsJson, exportAnswersAsPdf } from "./lib/storage";
 import ContractPreview from "./components/ContractPreview";
 import { exportContractAsPdf } from "./lib/contractExport";
@@ -522,7 +522,7 @@ function MindMap({ onOpenBlock, answers, total }) {
                   <Icon size={20} />
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Bloco {idx}</div>
+                  <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Bloco {idx + 1}</div>
                   <div className={`text-xs font-semibold ${c.textMuted}`}>{blockCompleted}/{blockTotal}</div>
                 </div>
               </div>
@@ -589,10 +589,10 @@ function BlockView({ block, onOpenQuestion, answers }) {
           {block.questions.map((qid, idx) => {
             const q = QUESTIONS[qid];
             const a = answers[qid];
-            const respType = a ? RESPONSE_TYPES[a.response] : null;
+            const optStyle = a ? OPTION_STYLES[a.response] : null;
             return (
               <div key={qid} className="relative pl-12 sm:pl-16">
-                <div className="absolute left-3 sm:left-5 top-5 w-5 h-5 rounded-full flex items-center justify-center ring-4 ring-white shadow-md" style={{ background: respType ? respType.color : "#94a3b8" }}>
+                <div className={`absolute left-3 sm:left-5 top-5 w-5 h-5 rounded-full flex items-center justify-center ring-4 ring-white shadow-md ${optStyle ? optStyle.pill : c.bg}`}>
                   <span className="text-[10px] font-bold text-white">{idx + 1}</span>
                 </div>
                 <button onClick={() => onOpenQuestion(qid)} className={`group w-full text-left p-4 sm:p-5 bg-white rounded-xl border ${c.border} ${c.bgHover} transition-all duration-150 hover:shadow-md active:scale-[0.995] focus:outline-none focus:ring-2 ${c.ring} focus:ring-offset-2 min-h-[88px]`}>
@@ -602,8 +602,8 @@ function BlockView({ block, onOpenQuestion, answers }) {
                       <h3 className="text-sm sm:text-base font-semibold text-slate-900 leading-snug">{q.title}</h3>
                     </div>
                     {a && (
-                      <div className="shrink-0 px-2 py-1 rounded-md text-[10px] font-bold border" style={{ background: respType.bg, color: respType.color, borderColor: respType.border }}>
-                        {respType.icon} {respType.label}
+                      <div className={`shrink-0 px-2 py-1 rounded-md text-[10px] font-semibold ${optStyle.chip} border ${optStyle.border}`}>
+                        {optStyle.label}
                       </div>
                     )}
                   </div>
@@ -616,7 +616,7 @@ function BlockView({ block, onOpenQuestion, answers }) {
                     {q.keywords.map(kw => <span key={kw} className={`px-2 py-0.5 rounded-md text-[11px] font-medium ${c.chip}`}>{kw}</span>)}
                   </div>
                   <div className={`mt-3 pt-3 border-t border-slate-100 flex items-center justify-end gap-1 text-xs font-medium ${c.textMuted} group-hover:translate-x-0.5 transition-transform`}>
-                    {a ? "Revisar" : "Responder"} <ChevronRight size={14} />
+                    {a ? "Revisar resposta" : "Responder"} <ChevronRight size={14} />
                   </div>
                 </button>
               </div>
@@ -677,22 +677,24 @@ function QuestionModal({ qid, question, block, currentAnswer, onClose, onAnswer 
           <div className="pt-4 border-t border-slate-200">
             <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Decisão (escolha única)</div>
             <div className="space-y-2">
-              {Object.entries(RESPONSE_TYPES).map(([key, t]) => {
-                const sel = response === key;
+              {Object.entries(OPTION_STYLES).map(([key, style]) => {
+                const isSelected = response === key;
+                const rt = RESPONSE_TYPES[key];
                 return (
-                  <button key={key} onClick={() => setResponse(key)} className="w-full text-left p-3 rounded-xl border-2 transition-all flex items-center gap-3" style={{
-                    background: sel ? t.bg : "#fff",
-                    borderColor: sel ? t.border : "#e2e8f0",
-                    boxShadow: sel ? `0 0 0 3px ${t.bg}` : "none"
-                  }}>
-                    <div className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ background: sel ? t.color : "#cbd5e1" }}>
-                      {sel && t.icon}
+                  <button
+                    key={key}
+                    onClick={() => setResponse(key)}
+                    className={`w-full text-left p-3 rounded-xl border-2 transition-all flex items-start gap-3 ${isSelected ? `${style.bg} ${style.border} ring-2 ring-offset-1 ring-slate-400` : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50"}`}
+                  >
+                    <div className={`shrink-0 w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center ${isSelected ? style.pill + " border-transparent" : "border-slate-300"}`}>
+                      {isSelected && <CheckCircle2 size={14} className="text-white" />}
                     </div>
-                    <div className="flex-1">
-                      <div className="font-bold text-sm" style={{ color: sel ? t.color : "#475569" }}>
-                        {t.label}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${style.chip}`}>{style.label}</span>
                       </div>
-                      {t.note && <div className="text-[11px] text-slate-500">{t.note}</div>}
+                      <div className={`text-sm font-medium ${isSelected ? style.text : "text-slate-800"}`}>{rt.label}</div>
+                      {rt.note && <div className="text-[11px] text-slate-500 mt-0.5">{rt.note}</div>}
                     </div>
                   </button>
                 );

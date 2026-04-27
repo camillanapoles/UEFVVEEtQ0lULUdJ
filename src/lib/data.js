@@ -266,6 +266,40 @@ export const RESPONSE_TYPES = {
   conditional: { label: "CONCORDO COM RESSALVAS", color: "#d97706", bg: "#fffbeb", border: "#fbbf24", icon: "≈", needsText: true }
 };
 
+// Classes Tailwind para badge e radio buttons (estilo visual polido)
+export const OPTION_STYLES = {
+  agree: {
+    label: "CONCORDO",
+    pill: "bg-emerald-500",
+    bg: "bg-emerald-50",
+    text: "text-emerald-700",
+    border: "border-emerald-300",
+    ring: "ring-emerald-200",
+    dot: "bg-emerald-500",
+    chip: "bg-emerald-100 text-emerald-800"
+  },
+  disagree: {
+    label: "DISCORDO",
+    pill: "bg-rose-500",
+    bg: "bg-rose-50",
+    text: "text-rose-700",
+    border: "border-rose-300",
+    ring: "ring-rose-200",
+    dot: "bg-rose-500",
+    chip: "bg-rose-100 text-rose-800"
+  },
+  conditional: {
+    label: "RESSALVAS",
+    pill: "bg-amber-500",
+    bg: "bg-amber-50",
+    text: "text-amber-700",
+    border: "border-amber-300",
+    ring: "ring-amber-200",
+    dot: "bg-amber-500",
+    chip: "bg-amber-100 text-amber-800"
+  }
+};
+
 export const COLOR_MAP = {
   slate: { ring: "ring-slate-400", bg: "bg-slate-500", bgHover: "hover:bg-slate-50", text: "text-slate-900", textMuted: "text-slate-700", border: "border-slate-300", gradient: "from-slate-500 to-slate-700", chip: "bg-slate-100 text-slate-800", solid: "#64748b" },
   emerald: { ring: "ring-emerald-400", bg: "bg-emerald-500", bgHover: "hover:bg-emerald-50", text: "text-emerald-900", textMuted: "text-emerald-700", border: "border-emerald-200", gradient: "from-emerald-400 to-emerald-600", chip: "bg-emerald-100 text-emerald-800", solid: "#10b981" },

@@ -38,15 +38,6 @@ export const INSUMOS_TABLE = [
 ];
 
 export const BLOCKS = {
-  estrutura: {
-    id: "estrutura",
-    title: "Estrutura da Relação",
-    subtitle: "Quem é o quê nesta parceria",
-    color: "slate",
-    iconName: "Network",
-    questions: ["q15"],
-    keywords: ["parceria", "viabilização", "ICT vs inventora"]
-  },
   remuneracao: {
     id: "remuneracao",
     title: "PI, Receitas & Custos",
@@ -95,15 +86,6 @@ export const BLOCKS = {
 };
 
 export const QUESTIONS = {
-  q15: {
-    tag: "Bloco 0 · #1",
-    clause: "Cl. 1.1 — Natureza da Aliança",
-    title: "Quem é o quê nesta parceria?",
-    keywords: ["modelo viabilização", "ICT nascente", "lab seu"],
-    why: "A 1.1 fala em 'colaboração técnica' de forma vaga. Como o Instituto está nascendo (sem lab, sem equipe técnica) e eu entro com infraestrutura, capital intelectual prévio, ART e em alguns casos a captação, queria alinhar formalmente o modelo da relação.",
-    ask: "Concordam que esse não é o modelo tradicional 'ICT madura + inventor que usa estrutura ICT', mas sim 'ICT viabilizadora + executora técnica autônoma'?",
-    suggestion: "Adicionar Cl. 1.3 explicitando: ICT como viabilizadora institucional + Camilla como executora técnica com infra própria. Isso facilita calibragem dos TEPs depois."
-  },
   q1: {
     tag: "Bloco 1 · #1",
     clause: "Cl. 3 — PI + Receitas + Custos",

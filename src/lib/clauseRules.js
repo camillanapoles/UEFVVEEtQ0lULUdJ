@@ -55,33 +55,6 @@ const ANEXO_II_TEXT = `A CONTRATADA declara, na data de assinatura do presente c
 // ════════════════════════════════════════════════════════════
 export const TRANSFORMATIONS = {
 
-  // ============== Q15 — Cl. 1.1 (Natureza da relação) ==============
-  q15: {
-    solution_best: [{
-      type: "addition", after_clause: "1.2",
-      new_id: "1.3", new_number: "1.3", new_title: "Modelo de Viabilização Institucional",
-      new_text: "Para fins de interpretação do presente contrato e calibragem dos respectivos TEPs, as partes declaram expressamente que esta relação configura modelo de VIABILIZAÇÃO INSTITUCIONAL, no qual o CONTRATANTE atua como Instituição de Ciência e Tecnologia (ICT) viabilizadora, aportando enquadramento jurídico, qualificação como OSCIP, capacidade de captação de recursos públicos e gestão administrativa, e a CONTRATADA atua como executora técnica autônoma, aportando infraestrutura laboratorial própria, capital intelectual prévio, responsabilidade técnica (ART) e know-how especializado."
-    }],
-    solution_alt: [{
-      type: "addendum", target_clause: "1.1",
-      addendum_text: "§ Único. A natureza específica da colaboração será calibrada nos respectivos Termos de Execução de Projeto (TEPs)."
-    }],
-    solution_weak: [{
-      type: "annotate", target_clause: "1.1", note_color: "blue_light",
-      note_text: "[ACEITAÇÃO INTEGRAL] Modelo tradicional ICT — Cl. 1.1 mantida sem alteração."
-    }],
-    lawyer: [
-      lawyerBlock("1.1",
-        "A Cl. 1.1 emprega o termo \"colaboração técnica\", de natureza vaga, ao passo que o título do contrato menciona \"Aliança Tecnológica e Prestação de Serviços\" e a Cl. 4.1 qualifica a CONTRATADA como prestadora de serviço autônomo (Art. 442-B CLT). Há, portanto, três figuras jurídicas distintas convivendo no mesmo instrumento, o que pode gerar ambiguidade interpretativa.",
-        "Inserir nova Cláusula 1.3 — Modelo de Viabilização Institucional — declarando expressamente que: (a) o CONTRATANTE atua como ICT viabilizadora; (b) a CONTRATADA atua como executora técnica autônoma com infraestrutura própria; (c) inexiste vínculo empregatício, subordinação hierárquica ou exclusividade; (d) em caso de conflito interpretativo entre as três figuras, prevalece o regime mais favorável à CONTRATADA."
-      )
-    ],
-    open: [{
-      type: "annotate", target_clause: "1.1", note_color: "yellow",
-      note_text: "[PENDENTE — EDIÇÃO PELA CONTRATADA]"
-    }]
-  },
-
   // ============== Q1 — Cl. 3 (Simetria 50/50 PI + receitas + custos) ==============
   q1: {
     solution_best: [

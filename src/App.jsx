@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
-  DollarSign, ShieldCheck, AlertTriangle, Settings, Truck, Network,
+  DollarSign, ShieldCheck, AlertTriangle, Settings, Truck,
   ChevronRight, X, CheckCircle2, XCircle, Sparkles,
   FileText, Lightbulb, Target, ArrowLeft, Table2, FileCode2,
   Download, Trash2, Lock, KeyRound, Copy, Plus, FileDown, AlertCircle
@@ -14,7 +14,7 @@ import { FileSignature, Play } from "lucide-react";
 import { hasValidSession, validateToken, clearSession } from "./lib/access";
 import { hasTokens, bootstrapAndUnlock, generateNewToken, listTokensMeta, purgeAll } from "./lib/tokens";
 
-const ICON_MAP = { DollarSign, ShieldCheck, AlertTriangle, Settings, Truck, Network };
+const ICON_MAP = { DollarSign, ShieldCheck, AlertTriangle, Settings, Truck };
 
 export default function App() {
   const [accessGranted, setAccessGranted] = useState(hasValidSession());
@@ -667,7 +667,7 @@ function QuestionModal({ qid, question, block, currentAnswer, onClose, onAnswer 
             )}
             <Section icon={<Lightbulb size={14} />} label="Contexto" text={question.why} />
             <Section icon={<Target size={14} />} label="Pergunta" text={question.ask} highlight />
-            <Section icon={<Sparkles size={14} />} label="Sugestão (mandato)" text={question.suggestion} />
+            <Section icon={<Sparkles size={14} />} label="Sugestão" text={question.suggestion} />
           </div>
 
           {question.showCategoryTable && <CategoryTable />}

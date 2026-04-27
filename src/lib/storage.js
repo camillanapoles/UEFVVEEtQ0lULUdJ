@@ -181,13 +181,16 @@ export async function exportAnswersAsPdf(answers, questions, blocks) {
       writeWrapped(q.clause, margin, pageW - margin * 2, { size: 8, color: [120, 120, 120] });
       y += 2;
       if (q.contract) {
-        writeWrapped(`Contrato: ${q.contract}`, margin, pageW - margin * 2, {
-          size: 8, color: [146, 64, 14]
-        });
-        y += 2;
+        doc.setFillColor(248, 250, 252);
+        const contractLines = doc.splitTextToSize(`Contrato: ${q.contract}`, pageW - margin * 2 - 8);
+        const boxH = contractLines.length * 11 + 8;
+        ensureSpace(boxH + 4);
+        doc.roundedRect(margin, y - 4, pageW - margin * 2, boxH, 3, 3, "F");
+        y += 4;
+        writeWrapped(q.contract, margin + 4, pageW - margin * 2 - 8, { size: 8, color: [100, 100, 100] });
+        y += 4;
       }
       writeWrapped(`Pergunta: ${q.ask}`, margin, pageW - margin * 2, { size: 9 });
-      writeWrapped(`Sugestão: ${q.suggestion}`, margin, pageW - margin * 2, { size: 8, color: [100, 100, 100] });
 
       if (a) {
         const style = respStyle[a.response] || { label: "?", color: [55, 65, 81] };

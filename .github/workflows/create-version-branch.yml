@@ -1,0 +1,39 @@
+name: Create version/pr10-deploy branch
+
+on:
+  workflow_dispatch:
+
+jobs:
+  create-branch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Create version/pr10-deploy branch
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const sha = 'd241fb1b76147f4ade636a1d7f8b974c34a42f4b';
+            const ref = 'refs/heads/version/pr10-deploy';
+            try {
+              await github.rest.git.createRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref,
+                sha,
+              });
+              console.log(`Branch version/pr10-deploy created at ${sha}`);
+            } catch (e) {
+              if (e.status === 422) {
+                console.log('Branch version/pr10-deploy already exists — updating to point at the correct commit');
+                await github.rest.git.updateRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: 'heads/version/pr10-deploy',
+                  sha,
+                  force: true,
+                });
+              } else {
+                throw e;
+              }
+            }

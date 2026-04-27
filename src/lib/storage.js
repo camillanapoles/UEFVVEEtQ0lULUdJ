@@ -148,6 +148,12 @@ export async function exportAnswersAsPdf(answers, questions, blocks) {
       writeWrapped(`${q.tag} — ${q.title}`, margin, pageW - margin * 2, { size: 11, bold: true });
       writeWrapped(q.clause, margin, pageW - margin * 2, { size: 8, color: [120, 120, 120] });
       y += 2;
+      if (q.contract) {
+        writeWrapped(`Contrato: ${q.contract}`, margin, pageW - margin * 2, {
+          size: 8, color: [146, 64, 14]
+        });
+        y += 2;
+      }
       writeWrapped(`Pergunta: ${q.ask}`, margin, pageW - margin * 2, { size: 9 });
 
       if (a) {

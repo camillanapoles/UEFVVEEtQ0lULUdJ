@@ -126,7 +126,11 @@ function MainApp({ initialIssuedToken, onLock }) {
     (async () => {
       try {
         const data = await loadAnswers();
-        setAnswers(data);
+        // Prune respostas órfãs (perguntas removidas em versões anteriores)
+        const pruned = Object.fromEntries(
+          Object.entries(data).filter(([qid]) => QUESTIONS[qid])
+        );
+        setAnswers(pruned);
       } catch (e) {
         console.error(e);
       } finally {
@@ -593,6 +597,9 @@ function QuestionModal({ qid, question, block, currentAnswer, onClose, onAnswer 
           </div>
 
           <div className="space-y-4 mb-6">
+            {question.contract && (
+              <Section icon={<FileText size={14} />} label="O que diz o contrato" text={question.contract} contract />
+            )}
             <Section icon={<Lightbulb size={14} />} label="Contexto" text={question.why} />
             <Section icon={<Target size={14} />} label="Pergunta ao CIT" text={question.ask} highlight />
             <Section icon={<Sparkles size={14} />} label="Sugestão" text={question.suggestion} />
@@ -649,11 +656,25 @@ function QuestionModal({ qid, question, block, currentAnswer, onClose, onAnswer 
   );
 }
 
-function Section({ icon, label, text, highlight }) {
+function Section({ icon, label, text, highlight, contract }) {
+  let cls, labelCls, textCls;
+  if (highlight) {
+    cls = "bg-slate-900 text-white";
+    labelCls = "text-slate-300";
+    textCls = "text-white";
+  } else if (contract) {
+    cls = "bg-amber-50 border-l-4 border-amber-400";
+    labelCls = "text-amber-700";
+    textCls = "text-amber-900 font-mono text-[13px]";
+  } else {
+    cls = "bg-slate-50";
+    labelCls = "text-slate-500";
+    textCls = "text-slate-800";
+  }
   return (
-    <div className={`p-3 rounded-xl ${highlight ? "bg-slate-900 text-white" : "bg-slate-50"}`}>
-      <div className={`flex items-center gap-1.5 text-[10px] font-semibold mb-1 ${highlight ? "text-slate-300" : "text-slate-500"} uppercase tracking-wider`}>{icon} {label}</div>
-      <p className={`text-sm leading-relaxed ${highlight ? "text-white" : "text-slate-800"}`}>{text}</p>
+    <div className={`p-3 rounded-xl ${cls}`}>
+      <div className={`flex items-center gap-1.5 text-[10px] font-semibold mb-1 ${labelCls} uppercase tracking-wider`}>{icon} {label}</div>
+      <p className={`text-sm leading-relaxed ${textCls}`}>{text}</p>
     </div>
   );
 }

@@ -8,6 +8,9 @@ import {
 
 import { BLOCKS, QUESTIONS, COLOR_MAP, PROJECT_CATEGORIES, INSUMOS_TABLE, RESPONSE_TYPES, findBlock } from "./lib/data";
 import { saveAnswers, loadAnswers, clearAnswers, exportAnswersAsJson, exportAnswersAsPdf } from "./lib/storage";
+import ContractPreview from "./components/ContractPreview";
+import { exportContractAsPdf } from "./lib/contractExport";
+import { FileSignature, Play } from "lucide-react";
 import { hasValidSession, validateToken, clearSession } from "./lib/access";
 import { hasTokens, bootstrapAndUnlock, generateNewToken, listTokensMeta, purgeAll } from "./lib/tokens";
 
@@ -166,6 +169,16 @@ function MainApp({ initialIssuedToken, onLock }) {
 
   const handleExportJson = () => exportAnswersAsJson(answers, QUESTIONS);
   const handleExportPdf = () => exportAnswersAsPdf(answers, QUESTIONS, BLOCKS);
+  const handleViewContract = () => setView("contract");
+  const handleContractPdf = () => exportContractAsPdf("contract-preview");
+  const handlePreAgree = () => {
+    if (!confirm("Preencher TODAS as perguntas como CONCORDO?\n\nIsso aplica todas as sugestões/mandatos ao contrato consolidado.")) return;
+    const allAgree = {};
+    Object.keys(QUESTIONS).forEach((qid) => {
+      allAgree[qid] = { response: "agree", ressalva_text: null, timestamp: new Date().toISOString() };
+    });
+    setAnswers(allAgree);
+  };
 
   const handleClear = () => {
     if (confirm("Apagar todas as respostas salvas?")) {
@@ -217,6 +230,22 @@ function MainApp({ initialIssuedToken, onLock }) {
               <span className="text-xs font-medium text-slate-600 tabular-nums">{completedCount}/{totalQuestions}</span>
             </div>
             <TokenAdminButton onIssued={(t) => { setFreshToken(t); setTokenModalOpen(true); }} />
+            <button
+              onClick={handleViewContract}
+              disabled={completedCount === 0}
+              className="text-xs font-medium px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors flex items-center gap-1.5"
+              title="Visualizar contrato consolidado"
+            >
+              <FileSignature size={14} /> <span className="hidden sm:inline">Contrato</span>
+            </button>
+            <button
+              onClick={handlePreAgree}
+              disabled={completedCount === totalQuestions}
+              className="text-xs font-medium px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors flex items-center gap-1.5"
+              title="Preencher todas como CONCORDO"
+            >
+              <Play size={14} /> <span className="hidden sm:inline">CONCORDO+</span>
+            </button>
             <button onClick={handleExportPdf} disabled={completedCount === 0}
               className="text-xs font-medium px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors flex items-center gap-1.5"
               title="Exportar PDF">
@@ -249,6 +278,35 @@ function MainApp({ initialIssuedToken, onLock }) {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         {view === "mindmap" && <MindMap onOpenBlock={openBlock} answers={answers} total={totalQuestions} />}
         {view === "block" && activeBlock && <BlockView block={BLOCKS[activeBlock]} onOpenQuestion={openQuestion} answers={answers} />}
+
+        {view === "contract" && (
+          <div>
+            <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">Contrato Consolidado</h2>
+                <p className="text-xs text-slate-500">Versão com decisões da reunião aplicadas. Clique em "Baixar PDF" para gerar o documento.</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setView("mindmap")}
+                  className="text-xs font-medium px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                >
+                  ← Voltar
+                </button>
+                <button
+                  onClick={handleContractPdf}
+                  className="text-xs font-medium px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors flex items-center gap-1.5"
+                >
+                  <FileSignature size={14} /> Baixar PDF
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <ContractPreview answers={answers} questions={QUESTIONS} />
+            </div>
+          </div>
+        )}
       </main>
 
       {activeQuestion && (
